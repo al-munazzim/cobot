@@ -1,6 +1,5 @@
 """Tests for plugin system (registry, base, interfaces)."""
 
-
 import pytest
 
 from cobot.plugins import (

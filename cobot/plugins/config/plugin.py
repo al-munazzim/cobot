@@ -166,9 +166,9 @@ class ConfigPlugin(Plugin):
             config = CobotConfig.load(local_config)
             self._config_path = local_config
 
-        # Legacy: try config.yaml
+        # Legacy: try config.yaml (only if no other config found)
         legacy_config = Path("config.yaml")
-        if legacy_config.exists() and not local_config.exists():
+        if legacy_config.exists() and self._config_path is None:
             config = CobotConfig.load(legacy_config)
             self._config_path = legacy_config
 

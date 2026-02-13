@@ -110,13 +110,15 @@ class TestConfigSetGet:
             config_path.write_text("identity:\n  name: OldName\n")
 
             result = runner.invoke(
-                cli, ["config", "set", "identity.name", "NewName", "-c", str(config_path)]
+                cli,
+                ["config", "set", "identity.name", "NewName", "-c", str(config_path)],
             )
             assert result.exit_code == 0
             assert "NewName" in result.output
 
             # Verify file was updated
             import yaml
+
             with open(config_path) as f:
                 cfg = yaml.safe_load(f)
             assert cfg["identity"]["name"] == "NewName"
@@ -127,11 +129,13 @@ class TestConfigSetGet:
             config_path.write_text("")
 
             result = runner.invoke(
-                cli, ["config", "set", "ppq.model", "openai/gpt-4o", "-c", str(config_path)]
+                cli,
+                ["config", "set", "ppq.model", "openai/gpt-4o", "-c", str(config_path)],
             )
             assert result.exit_code == 0
 
             import yaml
+
             with open(config_path) as f:
                 cfg = yaml.safe_load(f)
             assert cfg["ppq"]["model"] == "openai/gpt-4o"
@@ -147,6 +151,7 @@ class TestConfigSetGet:
             assert result.exit_code == 0
 
             import yaml
+
             with open(config_path) as f:
                 cfg = yaml.safe_load(f)
             assert cfg["exec"]["timeout"] == 60
@@ -163,6 +168,7 @@ class TestConfigSetGet:
             assert result.exit_code == 0
 
             import yaml
+
             with open(config_path) as f:
                 cfg = yaml.safe_load(f)
             assert cfg["exec"]["enabled"] is False
@@ -181,7 +187,9 @@ class TestConfigSetGet:
     def test_config_get_nested(self, runner):
         with tempfile.TemporaryDirectory() as tmpdir:
             config_path = Path(tmpdir) / "cobot.yml"
-            config_path.write_text("ppq:\n  model: openai/gpt-4o\n  api_base: https://api.ppq.ai\n")
+            config_path.write_text(
+                "ppq:\n  model: openai/gpt-4o\n  api_base: https://api.ppq.ai\n"
+            )
 
             result = runner.invoke(
                 cli, ["config", "get", "ppq.model", "-c", str(config_path)]

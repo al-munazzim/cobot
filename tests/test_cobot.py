@@ -204,13 +204,21 @@ class TestCommunicationIntegration:
         comm = mock_registry.get("communication")
         comm.poll.return_value = [
             IncomingMessage(
-                id="e1", channel_type="telegram", channel_id="-100123",
-                sender_id="1", sender_name="alice", content="Hi",
+                id="e1",
+                channel_type="telegram",
+                channel_id="-100123",
+                sender_id="1",
+                sender_name="alice",
+                content="Hi",
                 timestamp=datetime.now(),
             ),
             IncomingMessage(
-                id="e2", channel_type="telegram", channel_id="-100123",
-                sender_id="2", sender_name="bob", content="Hello",
+                id="e2",
+                channel_type="telegram",
+                channel_id="-100123",
+                sender_id="2",
+                sender_name="bob",
+                content="Hello",
                 timestamp=datetime.now(),
             ),
         ]
