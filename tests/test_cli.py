@@ -210,6 +210,112 @@ class TestConfigSetGet:
             assert "not found" in result.output.lower()
 
 
+class TestConfigPathFinding:
+    """Test _find_config_path() logic."""
+
+    def test_finds_local_config_first(self):
+        from cobot.cli import _find_config_path
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+
+                # Create local config
+                local_config = Path("cobot.yml")
+                local_config.write_text("identity:\n  name: Local\n")
+
+                path = _find_config_path()
+                assert path == local_config
+            finally:
+                os.chdir(original_cwd)
+
+    def test_falls_back_to_home_config(self):
+        from cobot.cli import _find_config_path
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            original_cwd = os.getcwd()
+            try:
+                os.chdir(tmpdir)
+                # No local config exists
+
+                path = _find_config_path()
+                assert path == Path.home() / ".cobot" / "cobot.yml"
+            finally:
+                os.chdir(original_cwd)
+
+    def test_explicit_path_overrides(self):
+        from cobot.cli import _find_config_path
+
+        path = _find_config_path("/custom/path/config.yml")
+        assert path == Path("/custom/path/config.yml")
+
+    def test_config_set_uses_existing_home_config(self, runner):
+        """config set should update existing home config, not create local."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            original_cwd = os.getcwd()
+            original_home = os.environ.get("HOME")
+            try:
+                # Set up fake home with config
+                fake_home = Path(tmpdir) / "home"
+                fake_home.mkdir()
+                (fake_home / ".cobot").mkdir()
+                home_config = fake_home / ".cobot" / "cobot.yml"
+                home_config.write_text("identity:\n  name: HomeBot\n")
+
+                os.environ["HOME"] = str(fake_home)
+
+                # Work from a different directory (no local config)
+                workdir = Path(tmpdir) / "work"
+                workdir.mkdir()
+                os.chdir(workdir)
+
+                result = runner.invoke(
+                    cli, ["config", "set", "identity.name", "UpdatedBot"]
+                )
+                assert result.exit_code == 0
+
+                # Should have updated home config, not created local
+                assert not (workdir / "cobot.yml").exists()
+                assert "UpdatedBot" in home_config.read_text()
+            finally:
+                os.chdir(original_cwd)
+                if original_home:
+                    os.environ["HOME"] = original_home
+
+    def test_config_get_reads_home_config(self, runner):
+        """config get should read from home config when no local exists."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            original_cwd = os.getcwd()
+            original_home = os.environ.get("HOME")
+            try:
+                # Set up fake home with config
+                fake_home = Path(tmpdir) / "home"
+                fake_home.mkdir()
+                (fake_home / ".cobot").mkdir()
+                home_config = fake_home / ".cobot" / "cobot.yml"
+                home_config.write_text("identity:\n  name: HomeBot\n")
+
+                os.environ["HOME"] = str(fake_home)
+
+                # Work from a different directory (no local config)
+                workdir = Path(tmpdir) / "work"
+                workdir.mkdir()
+                os.chdir(workdir)
+
+                result = runner.invoke(cli, ["config", "get", "identity.name"])
+                assert result.exit_code == 0
+                assert "HomeBot" in result.output
+            finally:
+                os.chdir(original_cwd)
+                if original_home:
+                    os.environ["HOME"] = original_home
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+
 class TestConfigMerging:
     """Test config merging logic."""
 
