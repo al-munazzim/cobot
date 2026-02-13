@@ -614,9 +614,11 @@ def plugins():
     """List available plugins and their wizard sections."""
     try:
         from cobot.plugins import init_plugins, get_registry
+        from pathlib import Path
 
         try:
-            init_plugins()
+            plugins_dir = Path(__file__).parent / "plugins"
+            init_plugins(plugins_dir)
         except Exception as e:
             click.echo(f"Note: Could not fully initialize plugins: {e}", err=True)
 
