@@ -4,7 +4,6 @@ Priority: 16 (after persistence)
 """
 
 import sys
-from typing import Optional
 
 from ..base import Plugin, PluginMeta
 

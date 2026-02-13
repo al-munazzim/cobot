@@ -8,9 +8,7 @@ import os
 import re
 import subprocess
 import sys
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
 
 from ..base import Plugin, PluginMeta
 from ..interfaces import ToolProvider
@@ -244,7 +242,7 @@ class ToolsPlugin(Plugin, ToolProvider):
         try:
             content = resolved.read_text()
             if len(content) > self._context_budget:
-                return content[:self._context_budget] + f"\n\n[truncated]"
+                return content[:self._context_budget] + "\n\n[truncated]"
             return content
         except Exception as e:
             return f"Error: {e}"
@@ -275,7 +273,7 @@ class ToolsPlugin(Plugin, ToolProvider):
             if old_text not in content:
                 return f"Error: Text not found in {path}"
             if content.count(old_text) > 1:
-                return f"Error: Text found multiple times - be more specific"
+                return "Error: Text found multiple times - be more specific"
             
             resolved.write_text(content.replace(old_text, new_text))
             return f"Successfully edited {path}"

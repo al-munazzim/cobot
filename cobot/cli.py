@@ -329,15 +329,15 @@ def config_show():
     
     click.echo("Identity:")
     click.echo(f"  name: {cfg.identity_name}")
-    click.echo(f"\nPolling:")
+    click.echo("\nPolling:")
     click.echo(f"  interval: {cfg.polling_interval}s")
-    click.echo(f"\nProvider:")
+    click.echo("\nProvider:")
     click.echo(f"  provider: {cfg.provider}")
-    click.echo(f"\nPaths:")
+    click.echo("\nPaths:")
     click.echo(f"  skills: {cfg.skills_path}")
     click.echo(f"  plugins: {cfg.plugins_path}")
     click.echo(f"  memory: {cfg.memory_path}")
-    click.echo(f"\nExec:")
+    click.echo("\nExec:")
     click.echo(f"  enabled: {cfg.exec_enabled}")
 
 

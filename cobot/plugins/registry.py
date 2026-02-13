@@ -10,7 +10,6 @@ The registry handles:
 """
 
 import sys
-from pathlib import Path
 from typing import Optional, Type
 from collections import defaultdict
 

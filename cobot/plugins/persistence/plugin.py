@@ -53,7 +53,7 @@ class PersistencePlugin(Plugin):
         if path.exists():
             try:
                 return json.loads(path.read_text())
-            except:
+            except Exception:
                 pass
         return {
             "peer_npub": npub,

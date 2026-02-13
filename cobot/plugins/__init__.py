@@ -12,7 +12,6 @@ must contain a plugin.py with a create_plugin() factory function.
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Optional
 
 from .base import Plugin, PluginMeta, HOOK_METHODS
 from .interfaces import (

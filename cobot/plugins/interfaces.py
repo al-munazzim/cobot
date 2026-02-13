@@ -6,7 +6,7 @@ This ensures interchangeability (e.g., ppq and ollama both implement LLMProvider
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, Any
+from typing import Optional
 
 
 # --- LLM Provider Interface ---

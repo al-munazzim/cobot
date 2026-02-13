@@ -4,8 +4,9 @@ from .plugin import (
     CobotConfig,
     ConfigPlugin,
     create_plugin,
-    _expand_env_vars,
 )
+
+__all__ = ["CobotConfig", "ConfigPlugin", "create_plugin", "Config", "load_config"]
 
 # Backward compatibility aliases
 Config = CobotConfig
@@ -13,7 +14,6 @@ Config = CobotConfig
 
 def load_config():
     """Load config using the plugin."""
-    from pathlib import Path
     plugin = create_plugin()
     plugin.configure({})
     return plugin.get_config()

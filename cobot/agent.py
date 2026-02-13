@@ -235,7 +235,7 @@ class Cobot:
             try:
                 identity = comm.get_identity()
                 print(f"Identity: {identity.get('npub', 'unknown')[:40]}...", file=sys.stderr)
-            except:
+            except Exception:
                 pass
         
         interval = 30
