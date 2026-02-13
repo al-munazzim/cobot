@@ -85,14 +85,60 @@ def discover_plugins(plugins_dir: Path) -> list[type[Plugin]]:
     return plugin_classes
 
 
+def load_external_plugins(packages: list[str]) -> list[type]:
+    """Load plugins from installed packages.
+
+    Args:
+        packages: List of package names (e.g., ["cobot_telegram"])
+
+    Returns:
+        List of plugin classes
+    """
+    plugin_classes = []
+
+    for package_name in packages:
+        try:
+            # Import the package
+            module = importlib.import_module(package_name)
+
+            # Look for create_plugin in the module or submodule
+            create_plugin = getattr(module, "create_plugin", None)
+
+            if create_plugin is None:
+                # Try .plugin submodule
+                try:
+                    plugin_module = importlib.import_module(f"{package_name}.plugin")
+                    create_plugin = getattr(plugin_module, "create_plugin", None)
+                except ImportError:
+                    pass
+
+            if create_plugin:
+                instance = create_plugin()
+                plugin_classes.append(type(instance))
+                print(f"[Plugins] Loaded external: {package_name}", file=sys.stderr)
+            else:
+                print(
+                    f"[Plugins] Warning: {package_name} has no create_plugin()",
+                    file=sys.stderr,
+                )
+
+        except ImportError as e:
+            print(f"[Plugins] Failed to load {package_name}: {e}", file=sys.stderr)
+        except Exception as e:
+            print(f"[Plugins] Error loading {package_name}: {e}", file=sys.stderr)
+
+    return plugin_classes
+
+
 def init_plugins(plugins_dir: Path, config: dict = None) -> PluginRegistry:
     """Initialize the plugin system.
 
     1. Discover plugins from directory
-    2. Filter based on config (provider selection, enabled/disabled)
-    3. Register plugins
-    4. Configure all plugins
-    5. Start all plugins
+    2. Load external plugins from packages
+    3. Filter based on config (provider selection, enabled/disabled)
+    4. Register plugins
+    5. Configure all plugins
+    6. Start all plugins
 
     Args:
         plugins_dir: Directory containing plugin subdirectories
@@ -110,12 +156,17 @@ def init_plugins(plugins_dir: Path, config: dict = None) -> PluginRegistry:
     plugins_config = config.get("plugins", {})
     enabled_list = plugins_config.get("enabled", [])
     disabled_list = plugins_config.get("disabled", [])
+    external_packages = plugins_config.get("external", [])
 
     # Get or create registry
     registry = get_registry()
 
-    # Discover plugins
+    # Discover built-in plugins
     plugin_classes = discover_plugins(plugins_dir)
+
+    # Load external plugins from packages
+    if external_packages:
+        plugin_classes.extend(load_external_plugins(external_packages))
 
     # Filter and register plugins
     for plugin_class in plugin_classes:
