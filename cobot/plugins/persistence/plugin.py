@@ -20,7 +20,7 @@ class PersistencePlugin(Plugin):
         id="persistence",
         version="1.0.0",
         capabilities=["persistence"],
-        dependencies=["config"],
+        dependencies=["config", "workspace"],
         priority=15,
     )
 
@@ -28,23 +28,30 @@ class PersistencePlugin(Plugin):
         self._memory_dir: Optional[Path] = None
         self._conversations: dict[str, dict] = {}
         self._current_peer: Optional[str] = None
-        self._enabled: bool = True
+        self._enabled: bool = False  # Default disabled, use --continue to enable
+        self._registry = None
 
     def configure(self, config: dict) -> None:
         persistence_config = config.get("persistence", {})
-        self._enabled = persistence_config.get("enabled", True)
-        
-        paths = config.get("paths", {})
-        memory_path = paths.get("memory", "./memory")
-        self._memory_dir = Path(memory_path) / "conversations"
+        self._enabled = persistence_config.get("enabled", False)
 
     def start(self) -> None:
         if not self._enabled:
-            print("[Persistence] Disabled (--fresh mode)", file=sys.stderr)
+            print("[Persistence] Disabled (use --continue to load history)", file=sys.stderr)
             return
-        if self._memory_dir:
-            self._memory_dir.mkdir(parents=True, exist_ok=True)
-            print(f"[Persistence] Memory dir: {self._memory_dir}", file=sys.stderr)
+        
+        # Get workspace path from workspace plugin
+        if self._registry:
+            workspace = self._registry.get("workspace")
+            if workspace:
+                self._memory_dir = workspace.get_path("memory") / "conversations"
+            else:
+                self._memory_dir = Path.home() / ".cobot" / "workspace" / "memory" / "conversations"
+        else:
+            self._memory_dir = Path.home() / ".cobot" / "workspace" / "memory" / "conversations"
+        
+        self._memory_dir.mkdir(parents=True, exist_ok=True)
+        print(f"[Persistence] Memory dir: {self._memory_dir}", file=sys.stderr)
 
     def stop(self) -> None:
         pass

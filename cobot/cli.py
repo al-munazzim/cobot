@@ -83,8 +83,8 @@ def cli():
 @click.option("--stdin", is_flag=True, help="Run in stdin mode (no Nostr)")
 @click.option("--plugins", "-p", type=click.Path(exists=True), help="Plugins directory")
 @click.option("--debug", "-d", is_flag=True, help="Enable debug logging")
-@click.option("--fresh", "-f", is_flag=True, help="Start fresh (ignore conversation history)")
-def run(config: Optional[str], stdin: bool, plugins: Optional[str], debug: bool, fresh: bool):
+@click.option("--continue", "-C", "continue_session", is_flag=True, help="Continue previous conversation")
+def run(config: Optional[str], stdin: bool, plugins: Optional[str], debug: bool, continue_session: bool):
     """Start the cobot agent."""
     # Check if already running
     existing_pid = read_pid()
@@ -114,12 +114,14 @@ def run(config: Optional[str], stdin: bool, plugins: Optional[str], debug: bool,
                 raw_config["logger"] = {}
             raw_config["logger"]["level"] = "debug"
 
-        # Disable persistence if --fresh flag
-        if fresh:
-            if "persistence" not in raw_config:
-                raw_config["persistence"] = {}
+        # Persistence: disabled by default, --continue to enable
+        if "persistence" not in raw_config:
+            raw_config["persistence"] = {}
+        if continue_session:
+            raw_config["persistence"]["enabled"] = True
+            click.echo("Continuing previous conversation", err=True)
+        else:
             raw_config["persistence"]["enabled"] = False
-            click.echo("Starting fresh (persistence disabled)", err=True)
 
         # Load plugins with config
         plugins_dir = Path(plugins) if plugins else Path("cobot/plugins")
