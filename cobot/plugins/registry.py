@@ -35,6 +35,10 @@ class PluginRegistry:
         self._load_order: list[str] = []  # Ordered list of plugin IDs
         self._started: bool = False
 
+    def __len__(self) -> int:
+        """Return number of registered plugins."""
+        return len(self._plugins)
+
     def register(self, plugin_class: Type[Plugin]) -> Plugin:
         """Validate and register a plugin class.
 

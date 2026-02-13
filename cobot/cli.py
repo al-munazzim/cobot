@@ -144,7 +144,7 @@ def run(
             registry = asyncio.run(
                 plugin_system.init_plugins(plugins_dir, config=raw_config)
             )
-            click.echo(f"Loaded {registry} plugin(s)", err=True)
+            click.echo(f"Loaded {len(registry)} plugin(s)", err=True)
         else:
             registry = plugin_system.get_registry()
 
