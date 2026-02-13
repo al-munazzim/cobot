@@ -366,22 +366,40 @@ def config():
 
 
 @config.command("show")
-def config_show():
-    """Show current configuration."""
+@click.option("--raw", is_flag=True, help="Show raw YAML")
+@click.option("--config", "-c", "config_path", type=click.Path(), help="Config file (default: cobot.yml)")
+def config_show(raw: bool, config_path: Optional[str]):
+    """Show current configuration.
+
+    Keys shown can be used with 'config get/set' commands.
+    """
+    import yaml
+
+    if raw:
+        path = Path(config_path) if config_path else Path("cobot.yml")
+        if path.exists():
+            click.echo(path.read_text())
+        else:
+            click.echo(f"Config file not found: {path}", err=True)
+        return
+
     cfg = load_merged_config()
 
-    click.echo("Identity:")
+    # Show with actual YAML keys for use with get/set
+    click.echo("identity:")
     click.echo(f"  name: {cfg.identity_name}")
-    click.echo("\nPolling:")
-    click.echo(f"  interval: {cfg.polling_interval}s")
-    click.echo("\nProvider:")
-    click.echo(f"  provider: {cfg.provider}")
-    click.echo("\nPaths:")
+    click.echo("\npolling:")
+    click.echo(f"  interval_seconds: {cfg.polling_interval}")
+    click.echo(f"\nprovider: {cfg.provider}")
+    click.echo("\npaths:")
     click.echo(f"  skills: {cfg.skills_path}")
     click.echo(f"  plugins: {cfg.plugins_path}")
     click.echo(f"  memory: {cfg.memory_path}")
-    click.echo("\nExec:")
+    click.echo("\nexec:")
     click.echo(f"  enabled: {cfg.exec_enabled}")
+    click.echo(f"  timeout: {cfg.exec_timeout}")
+
+    click.echo("\n# Use 'cobot config get <key>' or 'cobot config set <key> <value>'")
 
 
 @config.command("edit")
