@@ -21,7 +21,7 @@ Cobot is a lightweight personal AI agent that runs on your hardware, identifies 
 pip install cobot
 
 # Or from source
-git clone https://github.com/ultanio/cobot
+git clone https://forgejo.tail593e12.ts.net/Zeus/cobot
 cd cobot
 pip install -e .
 
@@ -199,7 +199,7 @@ Contributions welcome! Please read the architecture docs first.
 
 ## 🔗 Links
 
-- [Documentation](https://github.com/ultanio/cobot#readme)
-- [Issues](https://github.com/ultanio/cobot/issues)
+- [Documentation](https://forgejo.tail593e12.ts.net/Zeus/cobot#readme)
+- [Issues](https://forgejo.tail593e12.ts.net/Zeus/cobot/issues)
 - [Nostr](https://nostr.com) — Decentralized social protocol
 - [Lightning](https://lightning.network) — Bitcoin payment layer
