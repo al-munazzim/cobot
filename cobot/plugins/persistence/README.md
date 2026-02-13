@@ -111,9 +111,19 @@ def on_after_send(self, ctx):
 
 ## Configuration
 
+**Default: Disabled** — Each session starts fresh.
+
+Use `--continue` to load previous conversation:
+```bash
+cobot run --continue    # or -C
+cobot run --stdin -C
+```
+
 ```yaml
 # cobot.yml
 persistence:
-  memory_dir: "~/.cobot/workspace/memory/conversations"
-  max_messages: 100    # Per conversation
+  enabled: true    # Or use --continue flag
+  max_messages: 100    # Per conversation (future)
 ```
+
+Storage location: `~/.cobot/workspace/memory/conversations/`
