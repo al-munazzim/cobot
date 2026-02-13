@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 
-from cobot.plugins.ppq.plugin import PPQPlugin, InsufficientFundsError, create_plugin
-from cobot.plugins.interfaces import LLMResponse, LLMError
+from ..plugin import PPQPlugin, InsufficientFundsError, create_plugin
+from ...interfaces import LLMResponse, LLMError
 
 
 class TestLLMResponse:

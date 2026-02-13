@@ -53,6 +53,6 @@ include = ["cobot*"]
 exclude = ["tests*", "memory*", "skills*"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "cobot/plugins"]
 python_files = "test_*.py"
 python_functions = "test_*"

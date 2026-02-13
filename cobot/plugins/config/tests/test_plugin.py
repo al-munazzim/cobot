@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from cobot.plugins.config.plugin import CobotConfig, ConfigPlugin, create_plugin
+from ..plugin import CobotConfig, ConfigPlugin, create_plugin
 
 
 class TestCobotConfigDefaults:

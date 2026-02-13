@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from cobot.plugins.tools.plugin import ToolsPlugin, TOOL_DEFINITIONS, create_plugin
+from ..plugin import ToolsPlugin, TOOL_DEFINITIONS, create_plugin
 
 
 class TestToolDefinitions:
