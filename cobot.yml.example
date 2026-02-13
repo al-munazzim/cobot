@@ -36,6 +36,16 @@ filedrop:
   base_dir: "/tmp/filedrop"
   identity: "MyAgent"
 
+# Telegram - group logging and archival (optional)
+# telegram:
+#   bot_token: "${TELEGRAM_BOT_TOKEN}"
+#   groups:
+#     - id: -100123456789
+#       name: "dev-chat"
+#     - id: -100987654321
+#       name: "announcements"
+#   media_dir: "./media"
+
 # FileDrop Nostr signatures (optional)
 # filedrop_nostr:
 #   enabled: true

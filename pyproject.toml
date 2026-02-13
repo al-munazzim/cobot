@@ -26,13 +26,16 @@ dependencies = [
 nostr = [
     "pynostr>=0.6",
 ]
+telegram = [
+    "python-telegram-bot>=21.0",
+]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
     "ruff>=0.2",
 ]
 all = [
-    "cobot[nostr,dev]",
+    "cobot[nostr,telegram,dev]",
 ]
 
 [project.scripts]
