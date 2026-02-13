@@ -39,11 +39,11 @@ class MemoryPlugin(Plugin):
         """Store configuration."""
         self._config = config
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Initialize memory aggregator."""
         print("[Memory] Ready (extension point definer)", file=sys.stderr)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 

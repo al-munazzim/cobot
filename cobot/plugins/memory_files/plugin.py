@@ -37,7 +37,7 @@ class MemoryFilesPlugin(Plugin):
             self._workspace_path = Path(config["_workspace_path"])
             self._files_dir = self._workspace_path / "memory" / "files"
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Initialize files directory using workspace."""
         # Get workspace from registry
         if self._registry:
@@ -57,7 +57,7 @@ class MemoryFilesPlugin(Plugin):
         self._files_dir.mkdir(parents=True, exist_ok=True)
         print(f"[Memory-Files] {self._files_dir}", file=sys.stderr)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 

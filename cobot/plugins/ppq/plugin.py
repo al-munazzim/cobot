@@ -45,14 +45,14 @@ class PPQPlugin(Plugin, LLMProvider):
         self._api_key = ppq_config.get("api_key") or os.environ.get("PPQ_API_KEY")
         self._model = ppq_config.get("model", "gpt-5-nano")
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Validate configuration."""
         if not self._api_key:
             print("[PPQ] Warning: No API key configured", file=sys.stderr)
         else:
             print(f"[PPQ] Initialized with model {self._model}", file=sys.stderr)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 
@@ -117,11 +117,11 @@ class PPQPlugin(Plugin, LLMProvider):
 
     # --- Hook Methods ---
 
-    def on_before_llm_call(self, ctx: dict) -> dict:
+    async def on_before_llm_call(self, ctx: dict) -> dict:
         """Log before LLM call."""
         return ctx
 
-    def on_after_llm_call(self, ctx: dict) -> dict:
+    async def on_after_llm_call(self, ctx: dict) -> dict:
         """Log after LLM call."""
         return ctx
 

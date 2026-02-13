@@ -52,7 +52,7 @@ class WorkspacePlugin(Plugin):
         else:
             self._workspace = default_workspace
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Create workspace directories if missing."""
         self._workspace.mkdir(parents=True, exist_ok=True)
 
@@ -63,7 +63,7 @@ class WorkspacePlugin(Plugin):
 
         print(f"[Workspace] {self._workspace}", file=sys.stderr)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 

@@ -31,10 +31,10 @@ class CompactionPlugin(Plugin):
     def configure(self, config: dict) -> None:
         pass
 
-    def start(self) -> None:
+    async def start(self) -> None:
         print("[Compaction] Ready", file=sys.stderr)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         pass
 
     def set_registry(self, registry) -> None:
@@ -84,7 +84,7 @@ class CompactionPlugin(Plugin):
             print(f"[Compaction] Summarization failed: {e}", file=sys.stderr)
             return f"[Earlier conversation - {len(messages)} messages]"
 
-    def transform_history(self, ctx: dict) -> dict:
+    async def transform_history(self, ctx: dict) -> dict:
         """Compact history if too long."""
         messages = ctx.get("messages", [])
 

@@ -72,7 +72,7 @@ class NostrPlugin(Plugin, CommunicationProvider):
 
         self._relays = nostr_config.get("relays", DEFAULT_RELAYS)
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Initialize Nostr keys."""
         if not self._nsec:
             print(
@@ -94,7 +94,7 @@ class NostrPlugin(Plugin, CommunicationProvider):
         except Exception as e:
             print(f"[Nostr] Failed to initialize: {e}", file=sys.stderr)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 

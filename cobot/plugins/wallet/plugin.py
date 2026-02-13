@@ -45,7 +45,7 @@ class WalletPlugin(Plugin, WalletProvider):
         self._env = os.environ.copy()
         self._env["NODE_PATH"] = "/usr/lib/node_modules"
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Check wallet availability."""
         if self._scripts_dir and self._scripts_dir.exists():
             print(f"[Wallet] Initialized from {self._scripts_dir}", file=sys.stderr)
@@ -55,7 +55,7 @@ class WalletPlugin(Plugin, WalletProvider):
                 file=sys.stderr,
             )
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 

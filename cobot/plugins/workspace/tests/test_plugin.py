@@ -1,5 +1,6 @@
 """Tests for workspace plugin."""
 
+import asyncio
 import os
 import tempfile
 from pathlib import Path
@@ -17,7 +18,7 @@ class TestWorkspacePlugin:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             plugin.configure({"workspace": tmpdir})
-            plugin.start()
+            asyncio.run(plugin.start())
 
             # Should provide workspace root
             assert plugin.get_path() == Path(tmpdir)
@@ -33,7 +34,7 @@ class TestWorkspacePlugin:
         with tempfile.TemporaryDirectory() as tmpdir:
             workspace_dir = Path(tmpdir) / "workspace"
             plugin.configure({"workspace": str(workspace_dir)})
-            plugin.start()
+            asyncio.run(plugin.start())
 
             # Should create workspace and subdirs
             assert workspace_dir.exists()
@@ -59,7 +60,7 @@ class TestWorkspacePlugin:
                         "_cli_workspace": str(cli_path),
                     }
                 )
-                plugin.start()
+                asyncio.run(plugin.start())
 
                 assert plugin.get_path() == cli_path
             finally:
@@ -76,7 +77,7 @@ class TestWorkspacePlugin:
             os.environ["COBOT_WORKSPACE"] = str(env_path)
             try:
                 plugin.configure({"workspace": str(config_path)})
-                plugin.start()
+                asyncio.run(plugin.start())
 
                 assert plugin.get_path() == env_path
             finally:
