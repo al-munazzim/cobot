@@ -1,0 +1,71 @@
+# Cobot Configuration Example
+# Copy to cobot.yml and customize
+
+# LLM Provider: ppq, ollama
+provider: ppq
+
+identity:
+  name: "MyAgent"
+
+# Trusted contacts (who can send commands)
+trusted:
+  - npub: "npub1..."
+    name: "Owner"
+    role: "handler"
+
+# PPQ (api.ppq.ai) - recommended
+ppq:
+  api_base: "https://api.ppq.ai/v1"
+  api_key: "${PPQ_API_KEY}"  # Set via environment variable
+  model: "gpt-4o"
+
+# Ollama (local) - alternative
+ollama:
+  base_url: "http://localhost:11434"
+  model: "qwen2.5:7b"
+
+# Nostr communication (optional)
+# nostr:
+#   relays:
+#     - "wss://relay.damus.io"
+#     - "wss://nos.lol"
+#     - "wss://relay.nostr.band"
+
+# FileDrop - file-based communication
+filedrop:
+  base_dir: "/tmp/filedrop"
+  identity: "MyAgent"
+
+# FileDrop Nostr signatures (optional)
+# filedrop_nostr:
+#   enabled: true
+#   private_key: "${NOSTR_PRIVKEY}"
+#   reject_unknown: false
+
+# Plugin configuration
+plugins:
+  disabled: []
+  paths:
+    - /opt/cobot/plugins  # System-wide plugins
+
+# Hot reload - auto-restart on plugin changes
+hotreload:
+  enabled: true
+  watch:
+    - /opt/cobot/plugins
+  interval: 3.0
+  patterns:
+    - "*.py"
+
+# Paths
+paths:
+  skills: "./skills"
+  memory: "./memory"
+
+# Tool execution
+exec:
+  enabled: true
+  blocklist:
+    - "rm -rf /"
+    - "sudo rm"
+  timeout: 30
