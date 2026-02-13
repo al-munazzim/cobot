@@ -57,7 +57,18 @@ class LoggerPlugin(Plugin):
 
     def on_before_llm_call(self, ctx: dict) -> dict:
         model = ctx.get("model", "")
-        self._log("debug", "llm_call", f"Calling {model}")
+        messages = ctx.get("messages", [])
+        
+        # Log message count and system prompt preview
+        sys_prompt = ""
+        for m in messages:
+            if m.get("role") == "system":
+                sys_prompt = m.get("content", "")[:200]
+                break
+        
+        self._log("debug", "llm_call", f"Calling {model} ({len(messages)} msgs)")
+        if sys_prompt:
+            self._log("debug", "llm_call", f"System: {sys_prompt}...")
         return ctx
 
     def on_after_llm_call(self, ctx: dict) -> dict:
@@ -68,7 +79,43 @@ class LoggerPlugin(Plugin):
 
     def on_before_tool_exec(self, ctx: dict) -> dict:
         tool = ctx.get("tool", "")
-        self._log("info", "tool", f"Executing: {tool}")
+        args = ctx.get("args", {})
+        
+        # Format args for readability
+        if tool == "read_file":
+            detail = args.get("path", "?")
+        elif tool == "write_file":
+            path = args.get("path", "?")
+            content_len = len(args.get("content", ""))
+            detail = f"{path} ({content_len} chars)"
+        elif tool == "edit_file":
+            path = args.get("path", "?")
+            old_text = args.get("old_text", "")[:30]
+            detail = f"{path} ('{old_text}...')"
+        elif tool == "exec":
+            cmd = args.get("command", "?")
+            detail = cmd[:80] + ("..." if len(cmd) > 80 else "")
+        else:
+            # Generic: show first arg value
+            detail = str(list(args.values())[0])[:60] if args else ""
+        
+        self._log("info", "tool", f"{tool}: {detail}")
+        return ctx
+
+    def on_after_tool_exec(self, ctx: dict) -> dict:
+        tool = ctx.get("tool", "")
+        result = ctx.get("result", "")
+        
+        # Truncate long results
+        if len(result) > 100:
+            result_preview = result[:100] + f"... ({len(result)} chars)"
+        else:
+            result_preview = result
+        
+        # Remove newlines for log readability
+        result_preview = result_preview.replace("\n", "\\n")
+        
+        self._log("info", "tool_done", f"{tool} → {result_preview}")
         return ctx
 
     def on_after_send(self, ctx: dict) -> dict:

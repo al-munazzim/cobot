@@ -28,13 +28,20 @@ class PersistencePlugin(Plugin):
         self._memory_dir: Optional[Path] = None
         self._conversations: dict[str, dict] = {}
         self._current_peer: Optional[str] = None
+        self._enabled: bool = True
 
     def configure(self, config: dict) -> None:
+        persistence_config = config.get("persistence", {})
+        self._enabled = persistence_config.get("enabled", True)
+        
         paths = config.get("paths", {})
         memory_path = paths.get("memory", "./memory")
         self._memory_dir = Path(memory_path) / "conversations"
 
     def start(self) -> None:
+        if not self._enabled:
+            print("[Persistence] Disabled (--fresh mode)", file=sys.stderr)
+            return
         if self._memory_dir:
             self._memory_dir.mkdir(parents=True, exist_ok=True)
             print(f"[Persistence] Memory dir: {self._memory_dir}", file=sys.stderr)
@@ -84,6 +91,9 @@ class PersistencePlugin(Plugin):
     # --- Hook Methods ---
 
     def on_message_received(self, ctx: dict) -> dict:
+        if not self._enabled:
+            return ctx
+            
         sender = ctx.get("sender", "")
         message = ctx.get("message", "")
 
@@ -94,6 +104,9 @@ class PersistencePlugin(Plugin):
         return ctx
 
     def transform_history(self, ctx: dict) -> dict:
+        if not self._enabled:
+            return ctx
+            
         peer = ctx.get("peer", self._current_peer)
         messages = ctx.get("messages", [])
 
@@ -119,6 +132,9 @@ class PersistencePlugin(Plugin):
         return ctx
 
     def on_after_send(self, ctx: dict) -> dict:
+        if not self._enabled:
+            return ctx
+            
         recipient = ctx.get("recipient", self._current_peer)
         text = ctx.get("text", "")
 

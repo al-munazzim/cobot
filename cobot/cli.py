@@ -82,7 +82,9 @@ def cli():
 @click.option("--config", "-c", type=click.Path(exists=True), help="Config file path")
 @click.option("--stdin", is_flag=True, help="Run in stdin mode (no Nostr)")
 @click.option("--plugins", "-p", type=click.Path(exists=True), help="Plugins directory")
-def run(config: Optional[str], stdin: bool, plugins: Optional[str]):
+@click.option("--debug", "-d", is_flag=True, help="Enable debug logging")
+@click.option("--fresh", "-f", is_flag=True, help="Start fresh (ignore conversation history)")
+def run(config: Optional[str], stdin: bool, plugins: Optional[str], debug: bool, fresh: bool):
     """Start the cobot agent."""
     # Check if already running
     existing_pid = read_pid()
@@ -105,6 +107,19 @@ def run(config: Optional[str], stdin: bool, plugins: Optional[str]):
         if config_path.exists():
             with open(config_path) as f:
                 raw_config = yaml.safe_load(f) or {}
+
+        # Override logger level if --debug flag
+        if debug:
+            if "logger" not in raw_config:
+                raw_config["logger"] = {}
+            raw_config["logger"]["level"] = "debug"
+
+        # Disable persistence if --fresh flag
+        if fresh:
+            if "persistence" not in raw_config:
+                raw_config["persistence"] = {}
+            raw_config["persistence"]["enabled"] = False
+            click.echo("Starting fresh (persistence disabled)", err=True)
 
         # Load plugins with config
         plugins_dir = Path(plugins) if plugins else Path("cobot/plugins")
