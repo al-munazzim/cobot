@@ -425,8 +425,184 @@ def run_tests(verbose: bool):
     subprocess.run(cmd)
 
 
+def register_plugin_commands():
+    """Load plugins and let them register CLI commands."""
+    try:
+        from cobot.plugins import init_plugins, get_registry
+
+        # Try to initialize plugins (may fail if no config)
+        try:
+            init_plugins()
+        except Exception:
+            pass  # Config may not exist yet
+
+        registry = get_registry()
+        if registry:
+            for plugin in registry.all_plugins():
+                try:
+                    plugin.register_commands(cli)
+                except Exception as e:
+                    # Don't fail CLI if plugin command registration fails
+                    click.echo(
+                        f"Warning: Plugin {plugin.meta.id} command registration failed: {e}",
+                        err=True,
+                    )
+    except Exception:
+        pass  # Plugins not available
+
+
+# --- Setup Wizard (Core) ---
+
+
+@cli.command()
+@click.option(
+    "--non-interactive", "-y", is_flag=True, help="Use defaults, don't prompt"
+)
+def init(non_interactive: bool):
+    """Initialize cobot configuration.
+
+    Interactive wizard to set up cobot.yml with plugins and credentials.
+    """
+    import yaml
+
+    config_path = Path("cobot.yml")
+
+    if config_path.exists() and not non_interactive:
+        if not click.confirm("cobot.yml already exists. Overwrite?"):
+            click.echo("Aborted.")
+            return
+
+    click.echo("\n🤖 Cobot Setup Wizard\n")
+
+    config = {
+        "provider": "ppq",
+        "identity": {"name": "MyAgent"},
+    }
+
+    if non_interactive:
+        # Use defaults
+        config["ppq"] = {
+            "api_base": "https://api.ppq.ai/v1",
+            "api_key": "${PPQ_API_KEY}",
+            "model": "gpt-4o",
+        }
+    else:
+        # Interactive setup
+
+        # Identity
+        name = click.prompt("Agent name", default="MyAgent")
+        config["identity"]["name"] = name
+
+        # Provider
+        provider = click.prompt(
+            "LLM provider", type=click.Choice(["ppq", "ollama"]), default="ppq"
+        )
+        config["provider"] = provider
+
+        if provider == "ppq":
+            click.echo("\n📡 PPQ Configuration (api.ppq.ai)")
+            api_key = click.prompt(
+                "PPQ API key (or press enter to use env var)",
+                default="${PPQ_API_KEY}",
+                show_default=True,
+            )
+            model = click.prompt("Model", default="gpt-4o")
+            config["ppq"] = {
+                "api_base": "https://api.ppq.ai/v1",
+                "api_key": api_key,
+                "model": model,
+            }
+        else:
+            click.echo("\n🦙 Ollama Configuration (local)")
+            base_url = click.prompt("Ollama URL", default="http://localhost:11434")
+            model = click.prompt("Model", default="qwen2.5:7b")
+            config["ollama"] = {
+                "base_url": base_url,
+                "model": model,
+            }
+
+        # Communication plugins
+        click.echo("\n📬 Communication Plugins")
+
+        if click.confirm("Enable Nostr?", default=False):
+            config["nostr"] = {
+                "relays": [
+                    "wss://relay.damus.io",
+                    "wss://nos.lol",
+                ]
+            }
+
+        if click.confirm("Enable FileDrop?", default=True):
+            config["filedrop"] = {
+                "base_dir": "/tmp/filedrop",
+                "identity": name,
+            }
+
+        if click.confirm("Enable Telegram?", default=False):
+            token = click.prompt("Telegram bot token", default="${TELEGRAM_BOT_TOKEN}")
+            config["telegram"] = {
+                "bot_token": token,
+                "groups": [],
+                "media_dir": "./media",
+            }
+            click.echo("  (Add groups to cobot.yml after setup)")
+
+        # Tool execution
+        click.echo("\n🔧 Tool Execution")
+        exec_enabled = click.confirm("Enable shell command execution?", default=True)
+        config["exec"] = {
+            "enabled": exec_enabled,
+            "timeout": 30,
+        }
+
+    # Write config
+    with open(config_path, "w") as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+    click.echo(f"\n✅ Configuration written to {config_path}")
+    click.echo("\nNext steps:")
+    click.echo("  1. Review and edit cobot.yml")
+    click.echo("  2. Set environment variables (PPQ_API_KEY, etc.)")
+    click.echo("  3. Run: cobot run")
+
+
+@cli.command()
+def plugins():
+    """List available and enabled plugins."""
+    try:
+        from cobot.plugins import init_plugins, get_registry
+
+        try:
+            init_plugins()
+        except Exception as e:
+            click.echo(f"Note: Could not fully initialize plugins: {e}", err=True)
+
+        registry = get_registry()
+        if not registry:
+            click.echo("No plugin registry available.")
+            return
+
+        click.echo("\n📦 Plugins:\n")
+
+        for plugin in registry.all_plugins():
+            meta = plugin.meta
+            caps = ", ".join(meta.capabilities) if meta.capabilities else "none"
+            click.echo(f"  {meta.id} v{meta.version}")
+            click.echo(f"    Capabilities: {caps}")
+            if meta.extension_points:
+                click.echo(f"    Extension points: {', '.join(meta.extension_points)}")
+            click.echo()
+
+    except Exception as e:
+        click.echo(f"Error listing plugins: {e}", err=True)
+
+
 def main():
     """Entry point."""
+    # Let plugins register their commands
+    register_plugin_commands()
+
+    # Run CLI
     cli()
 
 

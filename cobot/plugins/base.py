@@ -135,6 +135,26 @@ class Plugin(ABC):
         """Called when an error occurs."""
         return ctx
 
+    # --- CLI Extension ---
+
+    def register_commands(self, cli) -> None:
+        """Register CLI commands.
+
+        Called during CLI initialization. Plugins can add commands/groups
+        to the main CLI.
+
+        Args:
+            cli: Click group (the main cobot CLI)
+
+        Example:
+            def register_commands(self, cli):
+                @cli.command()
+                def my_command():
+                    '''My plugin command.'''
+                    click.echo("Hello from plugin!")
+        """
+        pass
+
 
 # List of all hook method names
 HOOK_METHODS = [
