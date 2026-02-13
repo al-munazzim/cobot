@@ -206,14 +206,30 @@ class TestRegisterCommands:
         assert "Command B" in runner.invoke(test_cli, ["cmd-b"]).output
 
 
-class TestInitCommand:
-    """Test the init/setup wizard command."""
+class TestWizardGroup:
+    """Test the wizard command group."""
 
-    def test_init_command_exists(self):
-        """Test that init command is registered."""
+    def test_wizard_group_exists(self):
+        """Test that wizard group is registered."""
         from cobot.cli import cli
 
-        assert "init" in cli.commands
+        assert "wizard" in cli.commands
+
+    def test_wizard_init_exists(self):
+        """Test that wizard init subcommand exists."""
+        from cobot.cli import cli
+
+        assert "init" in cli.commands["wizard"].commands
+
+    def test_wizard_plugins_exists(self):
+        """Test that wizard plugins subcommand exists."""
+        from cobot.cli import cli
+
+        assert "plugins" in cli.commands["wizard"].commands
+
+
+class TestInitCommand:
+    """Test the wizard init command."""
 
     def test_init_non_interactive(self, tmp_path):
         """Test non-interactive init creates config."""
@@ -223,7 +239,7 @@ class TestInitCommand:
         runner = CliRunner()
 
         with runner.isolated_filesystem(temp_dir=tmp_path):
-            result = runner.invoke(cli, ["init", "-y"])
+            result = runner.invoke(cli, ["wizard", "init", "-y"])
 
             assert result.exit_code == 0
             assert "Configuration written" in result.output
@@ -252,7 +268,7 @@ class TestInitCommand:
                 f.write("existing: config\n")
 
             # Run init without confirmation
-            result = runner.invoke(cli, ["init"], input="n\n")
+            result = runner.invoke(cli, ["wizard", "init"], input="n\n")
 
             assert "Aborted" in result.output
 
@@ -404,16 +420,6 @@ class TestWizardExtensionPoints:
         assert received_config["identity"]["name"] == "MyAgent"
         assert received_config["provider"] == "ppq"
         assert received_config["ppq"]["model"] == "gpt-4o"
-
-
-class TestPluginsCommand:
-    """Test the plugins list command."""
-
-    def test_plugins_command_exists(self):
-        """Test that plugins command is registered."""
-        from cobot.cli import cli
-
-        assert "plugins" in cli.commands
 
 
 class TestRegisterPluginCommands:

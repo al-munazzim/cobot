@@ -454,7 +454,13 @@ def register_plugin_commands():
 # --- Setup Wizard (Core) ---
 
 
-@cli.command()
+@cli.group()
+def wizard():
+    """Setup wizard and plugin configuration."""
+    pass
+
+
+@wizard.command()
 @click.option(
     "--non-interactive", "-y", is_flag=True, help="Use defaults, don't prompt"
 )
@@ -593,9 +599,9 @@ def init(non_interactive: bool):
     click.echo("  3. Run: cobot run")
 
 
-@cli.command()
+@wizard.command()
 def plugins():
-    """List available and enabled plugins."""
+    """List available plugins and their wizard sections."""
     try:
         from cobot.plugins import init_plugins, get_registry
 
@@ -618,6 +624,17 @@ def plugins():
             click.echo(f"    Capabilities: {caps}")
             if meta.extension_points:
                 click.echo(f"    Extension points: {', '.join(meta.extension_points)}")
+
+            # Show wizard section if available
+            try:
+                section = plugin.wizard_section()
+                if section:
+                    name = section.get("name", meta.id)
+                    desc = section.get("description", "")
+                    click.echo(f"    Wizard: {name}" + (f" - {desc}" if desc else ""))
+            except Exception:
+                pass
+
             click.echo()
 
     except Exception as e:
