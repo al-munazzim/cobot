@@ -69,21 +69,32 @@ Unlike cloud-hosted assistants or complex frameworks, Cobot gives you true owner
 ### Install
 
 ```bash
-# From PyPI (when published)
-pip install cobot
-
-# From source
 git clone https://github.com/ultanio/cobot
 cd cobot
+
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# .venv\Scripts\activate   # Windows
+
+# Install cobot
 pip install -e .
 ```
 
-### Configure
+### Setup Wizard
+
+The easiest way to configure Cobot is the interactive wizard:
 
 ```bash
-cp cobot.yml.example cobot.yml
-# Edit cobot.yml with your API keys
+cobot init
 ```
+
+The wizard will guide you through:
+- **Identity** — Name your agent
+- **Provider** — Choose your LLM (PPQ, Ollama, etc.)
+- **Plugins** — Configure any installed plugins
+
+This creates a `cobot.yml` in your current directory.
 
 ### Run
 
@@ -96,6 +107,15 @@ cobot run --stdin
 
 # Check status
 cobot status
+```
+
+### Manual Configuration
+
+If you prefer manual setup, copy and edit the example config:
+
+```bash
+cp cobot.yml.example cobot.yml
+# Edit cobot.yml with your settings
 ```
 
 ## Configuration
@@ -251,7 +271,11 @@ cobot config validate  # Validate configuration
 ## Development
 
 ```bash
-# Install dev dependencies
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate
+
+# Install with dev dependencies
 pip install -e ".[dev]"
 
 # Run tests
