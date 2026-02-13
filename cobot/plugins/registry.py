@@ -121,6 +121,28 @@ class PluginRegistry:
         plugin_ids = self._capabilities.get(capability, [])
         return [self._plugins[pid] for pid in plugin_ids if pid in self._plugins]
 
+    def get_implementations(
+        self, extension_point: str
+    ) -> list[tuple[str, Plugin, str]]:
+        """Find all plugins implementing an extension point.
+
+        Looks at meta.implements dict for the extension point and returns
+        the implementing plugins with their method names.
+
+        Args:
+            extension_point: Extension point name (e.g., "session.receive")
+
+        Returns:
+            List of (plugin_id, plugin_instance, method_name) tuples
+        """
+        implementations = []
+        for plugin_id, plugin in self._plugins.items():
+            if hasattr(plugin.meta, "implements") and plugin.meta.implements:
+                method_name = plugin.meta.implements.get(extension_point)
+                if method_name:
+                    implementations.append((plugin_id, plugin, method_name))
+        return implementations
+
     def all_plugins(self) -> list[Plugin]:
         """Get all registered plugins in load order."""
         return [self._plugins[pid] for pid in self._load_order]
