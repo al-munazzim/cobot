@@ -18,6 +18,12 @@ class PluginMeta:
         default_factory=list
     )  # Required plugins: ["config"]
     priority: int = 50  # Load order (lower = earlier)
+    extension_points: list[str] = field(
+        default_factory=list
+    )  # Extension points this plugin defines: ["context.system_prompt"]
+    implements: dict[str, str] = field(
+        default_factory=dict
+    )  # Extension points this plugin implements: {"context.system_prompt": "get_soul"}
 
     def __post_init__(self):
         if not self.id:
