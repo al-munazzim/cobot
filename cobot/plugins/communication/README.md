@@ -2,6 +2,19 @@
 
 The communication plugin defines **extension points** for messaging. It's the abstraction layer between the agent and channel implementations.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Extension Points](#extension-points)
+- [Message Types](#message-types)
+  - [IncomingMessage](#incomingmessage)
+  - [OutgoingMessage](#outgoingmessage)
+- [Agent Usage](#agent-usage)
+- [Implementing Communication](#implementing-communication)
+- [Why This Layer?](#why-this-layer)
+- [Priority](#priority)
+
 ## Overview
 
 ```
