@@ -114,11 +114,12 @@ def run(
         import yaml
 
         # Load config file first (for plugin filtering)
-        config_path = Path(config) if config else Path("cobot.yml")
+        config_path = Path(config) if config else _find_config_path()
         raw_config = {}
         if config_path.exists():
             with open(config_path) as f:
                 raw_config = yaml.safe_load(f) or {}
+            print(f"[Config] Loaded from {config_path}", file=sys.stderr)
 
         # Override logger level if --debug flag
         if debug:
