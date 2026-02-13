@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cobot — Self-Sovereign AI Agent</title>
+<meta name="description" content="Minimal self-sovereign AI agent with Nostr identity and Lightning wallet. Your keys, your identity, your agent.">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* --- Reset & Foundation --- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #06070a;
+  --bg-elevated: #0d0f14;
+  --bg-card: #111318;
+  --bg-terminal: #0a0c10;
+  --surface: #161923;
+  --border: #1e2130;
+  --border-bright: #2a2e42;
+  --text: #e8eaf0;
+  --text-dim: #8890a4;
+  --text-muted: #555b72;
+  --amber: #f0a500;
+  --amber-dim: #c48800;
+  --amber-glow: rgba(240, 165, 0, 0.15);
+  --lightning: #f7931a;
+  --nostr: #8b5cf6;
+  --nostr-dim: #6d42d4;
+  --green: #34d399;
+  --green-dim: #10b981;
+  --red: #f87171;
+  --cyan: #67e8f9;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  --font-body: 'Space Grotesk', system-ui, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+}
+
+html {
+  scroll-behavior: smooth;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--bg);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* --- Noise texture overlay --- */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* --- Scrollbar --- */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* --- Layout --- */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+section {
+  padding: 100px 0;
+  position: relative;
+}
+
+/* --- Navigation --- */
+nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 16px 24px;
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  background: rgba(6, 7, 10, 0.8);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.3s ease;
+}
+
+nav .nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.nav-logo-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--amber);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--bg);
+}
+
+.nav-logo-text {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  list-style: none;
+}
+
+.nav-links a {
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 400;
+  transition: color 0.2s;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.nav-links a:hover { color: var(--text); }
+
+.nav-github {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.nav-github:hover {
+  color: var(--text);
+  border-color: var(--border-bright);
+  background: var(--surface);
+}
+
+.nav-github svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+/* --- Hero --- */
+.hero {
+  padding: 180px 0 120px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 800px;
+  background: radial-gradient(ellipse, var(--amber-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px 6px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 32px;
+  animation: fadeInUp 0.8s ease both;
+}
+
+.hero-badge-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--green);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
+  50% { opacity: 0.8; box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+}
+
+.hero h1 {
+  font-family: var(--font-mono);
+  font-size: clamp(40px, 6vw, 72px);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  margin-bottom: 8px;
+  animation: fadeInUp 0.8s ease 0.1s both;
+}
+
+.hero h1 .accent {
+  color: var(--amber);
+}
+
+.hero-tagline {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: clamp(20px, 3vw, 28px);
+  color: var(--text-dim);
+  margin-bottom: 32px;
+  animation: fadeInUp 0.8s ease 0.2s both;
+  letter-spacing: -0.01em;
+}
+
+.hero-desc {
+  font-size: 17px;
+  color: var(--text-dim);
+  max-width: 560px;
+  line-height: 1.7;
+  margin-bottom: 48px;
+  animation: fadeInUp 0.8s ease 0.3s both;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  animation: fadeInUp 0.8s ease 0.4s both;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: var(--amber);
+  color: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: #ffb31a;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 30px rgba(240, 165, 0, 0.25);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: 8px;
+  border: 1px solid var(--border-bright);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  border-color: var(--text-muted);
+  background: var(--surface);
+}
+
+/* --- Terminal block --- */
+.terminal {
+  background: var(--bg-terminal);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 64px;
+  animation: fadeInUp 0.8s ease 0.5s both;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+
+.terminal-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--border-bright);
+}
+
+.terminal-dot.r { background: #f87171; }
+.terminal-dot.y { background: #fbbf24; }
+.terminal-dot.g { background: #34d399; }
+
+.terminal-title {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.terminal-body {
+  padding: 24px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-x: auto;
+}
+
+.terminal-line {
+  display: flex;
+  gap: 8px;
+  white-space: nowrap;
+  opacity: 0;
+  animation: terminalLine 0.3s ease forwards;
+}
+
+.terminal-line .prompt {
+  color: var(--amber);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.terminal-line .cmd { color: var(--text); }
+.terminal-line .flag { color: var(--cyan); }
+.terminal-line .comment { color: var(--text-muted); font-style: italic; }
+.terminal-line .output { color: var(--text-dim); }
+.terminal-line .success { color: var(--green); }
+.terminal-line .nostr { color: var(--nostr); }
+.terminal-line .lightning { color: var(--lightning); }
+
+.terminal-line:nth-child(1) { animation-delay: 0.6s; }
+.terminal-line:nth-child(2) { animation-delay: 1.0s; }
+.terminal-line:nth-child(3) { animation-delay: 1.4s; }
+.terminal-line:nth-child(4) { animation-delay: 1.8s; }
+.terminal-line:nth-child(5) { animation-delay: 2.2s; }
+.terminal-line:nth-child(6) { animation-delay: 2.6s; }
+.terminal-line:nth-child(7) { animation-delay: 3.0s; }
+.terminal-line:nth-child(8) { animation-delay: 3.4s; }
+.terminal-line:nth-child(9) { animation-delay: 3.8s; }
+.terminal-line:nth-child(10) { animation-delay: 4.2s; }
+
+@keyframes terminalLine {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Section headers --- */
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--amber);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-label::before {
+  content: '';
+  width: 24px;
+  height: 1px;
+  background: var(--amber-dim);
+}
+
+.section-title {
+  font-family: var(--font-mono);
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  margin-bottom: 16px;
+}
+
+.section-desc {
+  font-size: 17px;
+  color: var(--text-dim);
+  max-width: 600px;
+  line-height: 1.7;
+}
+
+/* --- Stack diagram --- */
+.stack-section {
+  padding: 80px 0 100px;
+}
+
+.stack {
+  margin-top: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 640px;
+}
+
+.stack-layer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 28px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  position: relative;
+  transition: all 0.3s ease;
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.stack-layer.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.stack-layer:first-child { border-radius: 12px 12px 0 0; }
+.stack-layer:last-child { border-radius: 0 0 12px 12px; }
+
+.stack-layer:hover {
+  border-color: var(--border-bright);
+  background: var(--surface);
+}
+
+.stack-layer-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.stack-layer-detail {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.stack-layer .stack-icon {
+  font-size: 16px;
+  opacity: 0.6;
+}
+
+.stack-layer[data-layer="hardware"] { border-left: 3px solid var(--text-muted); }
+.stack-layer[data-layer="runtime"] { border-left: 3px solid var(--green); }
+.stack-layer[data-layer="identity"] { border-left: 3px solid var(--nostr); }
+.stack-layer[data-layer="wallet"] { border-left: 3px solid var(--lightning); }
+.stack-layer[data-layer="llm"] { border-left: 3px solid var(--cyan); }
+
+/* --- Features grid --- */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  margin-top: 64px;
+  background: var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.feature-card {
+  background: var(--bg-card);
+  padding: 36px 32px;
+  position: relative;
+  transition: all 0.3s ease;
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.feature-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.feature-card:hover {
+  background: var(--surface);
+}
+
+.feature-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.feature-card h3 {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.feature-card p {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.feature-card .feature-tag {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 3px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* --- Plugin table --- */
+.plugins-section {
+  padding: 100px 0;
+}
+
+.plugin-table {
+  margin-top: 48px;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.plugin-table th {
+  background: var(--bg-elevated);
+  padding: 14px 20px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.plugin-table td {
+  padding: 16px 20px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s;
+}
+
+.plugin-table tr:last-child td { border-bottom: none; }
+
+.plugin-table tbody tr:hover td {
+  background: var(--surface);
+}
+
+.plugin-name {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.plugin-cap {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.cap-llm { background: rgba(103, 232, 249, 0.1); color: var(--cyan); border: 1px solid rgba(103, 232, 249, 0.2); }
+.cap-comm { background: rgba(139, 92, 246, 0.1); color: var(--nostr); border: 1px solid rgba(139, 92, 246, 0.2); }
+.cap-wallet { background: rgba(247, 147, 26, 0.1); color: var(--lightning); border: 1px solid rgba(247, 147, 26, 0.2); }
+.cap-tools { background: rgba(52, 211, 153, 0.1); color: var(--green); border: 1px solid rgba(52, 211, 153, 0.2); }
+.cap-sys { background: rgba(136, 144, 164, 0.1); color: var(--text-dim); border: 1px solid rgba(136, 144, 164, 0.2); }
+
+.plugin-desc {
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+/* --- Extension points --- */
+.ext-section { padding: 80px 0 100px; }
+
+.ext-diagram {
+  margin-top: 48px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.ext-box {
+  padding: 24px 32px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  min-width: 180px;
+  transition: all 0.3s ease;
+}
+
+.ext-box:hover {
+  border-color: var(--border-bright);
+  transform: translateY(-2px);
+}
+
+.ext-box-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.ext-box-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ext-arrow {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.ext-code {
+  margin-top: 48px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  background: var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ext-code-block {
+  background: var(--bg-terminal);
+  padding: 28px;
+}
+
+.ext-code-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ext-code-label .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.ext-code-label .dot.define { background: var(--amber); }
+.ext-code-label .dot.implement { background: var(--green); }
+
+.ext-code-block pre {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ext-code-block pre .kw { color: var(--nostr); }
+.ext-code-block pre .str { color: var(--green); }
+.ext-code-block pre .var { color: var(--text); }
+.ext-code-block pre .cm { color: var(--text-muted); }
+.ext-code-block pre .fn { color: var(--amber); }
+
+/* --- Architecture --- */
+.arch-section { padding: 100px 0; }
+
+.arch-diagram {
+  margin-top: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: 800px;
+}
+
+.arch-row {
+  background: var(--bg-card);
+  padding: 24px 32px;
+  transition: background 0.2s;
+}
+
+.arch-row:hover { background: var(--surface); }
+
+.arch-row-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.arch-row-content {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.arch-chip {
+  padding: 6px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.arch-chip:hover {
+  color: var(--text);
+  border-color: var(--border-bright);
+}
+
+.arch-row-desc {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* --- CLI Reference --- */
+.cli-section { padding: 80px 0 100px; }
+
+.cli-grid {
+  margin-top: 48px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px;
+  background: var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.cli-item {
+  background: var(--bg-card);
+  padding: 20px 24px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  transition: background 0.2s;
+}
+
+.cli-item:hover { background: var(--surface); }
+
+.cli-cmd {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--amber);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cli-desc {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* --- Quickstart --- */
+.quickstart-section {
+  padding: 100px 0;
+  position: relative;
+}
+
+.quickstart-steps {
+  margin-top: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 640px;
+}
+
+.qs-step {
+  display: flex;
+  gap: 20px;
+}
+
+.qs-step-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--amber);
+  flex-shrink: 0;
+}
+
+.qs-step-content {
+  flex: 1;
+}
+
+.qs-step-title {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.qs-step-code {
+  background: var(--bg-terminal);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-dim);
+  overflow-x: auto;
+  position: relative;
+}
+
+.qs-step-code .prompt-char { color: var(--amber); user-select: none; }
+
+.copy-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.copy-btn:hover {
+  color: var(--text);
+  border-color: var(--border-bright);
+}
+
+/* --- Why section / comparison --- */
+.why-section { padding: 80px 0 100px; }
+
+.compare-table {
+  margin-top: 48px;
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.compare-table th {
+  background: var(--bg-elevated);
+  padding: 14px 20px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-table th:first-child { text-transform: uppercase; letter-spacing: 0.1em; font-size: 11px; }
+
+.compare-table th.highlight {
+  color: var(--amber);
+  background: rgba(240, 165, 0, 0.05);
+}
+
+.compare-table td {
+  padding: 14px 20px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.compare-table tr:last-child td { border-bottom: none; }
+
+.compare-table tbody tr:hover td { background: var(--surface); }
+
+.compare-table td:first-child {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.compare-table td.highlight {
+  background: rgba(240, 165, 0, 0.03);
+}
+
+.check { color: var(--green); font-weight: 600; }
+.cross { color: var(--text-muted); }
+.partial { color: var(--amber); }
+
+/* --- Footer --- */
+footer {
+  padding: 60px 0;
+  border-top: 1px solid var(--border);
+}
+
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.footer-brand {
+  max-width: 300px;
+}
+
+.footer-brand-name {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-brand-desc {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.footer-links {
+  display: flex;
+  gap: 64px;
+}
+
+.footer-col h4 {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.footer-col a {
+  display: block;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 14px;
+  padding: 4px 0;
+  transition: color 0.2s;
+}
+
+.footer-col a:hover { color: var(--text); }
+
+.footer-bottom {
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.footer-bottom a {
+  color: var(--text-dim);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-bottom a:hover { color: var(--text); }
+
+/* --- Separator --- */
+.divider {
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+}
+
+/* --- Scroll animations --- */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --- Responsive --- */
+@media (max-width: 768px) {
+  .features-grid { grid-template-columns: 1fr; }
+  .ext-code { grid-template-columns: 1fr; }
+  .cli-grid { grid-template-columns: 1fr; }
+  .ext-diagram { flex-direction: column; }
+  .ext-arrow { transform: rotate(90deg); }
+  .footer-links { gap: 32px; }
+  .footer-inner { flex-direction: column; }
+  .nav-links { display: none; }
+  section { padding: 60px 0; }
+  .hero { padding: 140px 0 80px; }
+  .compare-table { font-size: 12px; }
+  .compare-table th, .compare-table td { padding: 10px 12px; }
+}
+
+@media (max-width: 480px) {
+  .hero h1 { font-size: 32px; }
+  .hero-actions { flex-direction: column; }
+  .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <div class="nav-logo-icon">C</div>
+      <span class="nav-logo-text">cobot</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#plugins">Plugins</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#quickstart">Quick Start</a></li>
+    </ul>
+    <a href="https://github.com/ultanio/cobot" class="nav-github" target="_blank" rel="noopener">
+      <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      Source
+    </a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      <span>v0.1.0-alpha &middot; MIT License</span>
+    </div>
+    <h1>Your agent.<br>Your <span class="accent">keys</span>.<br>Your rules.</h1>
+    <p class="hero-tagline">Self-sovereign AI in ~2,000 lines of Python.</p>
+    <p class="hero-desc">
+      Cobot is a minimal personal AI agent that runs on your hardware,
+      identifies via Nostr, and transacts via Lightning Network.
+      No cloud. No custody. No permission needed.
+    </p>
+    <div class="hero-actions">
+      <a href="#quickstart" class="btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Get Started
+      </a>
+      <a href="https://github.com/ultanio/cobot" class="btn-secondary" target="_blank" rel="noopener">
+        View Source
+      </a>
+    </div>
+
+    <!-- Terminal demo -->
+    <div class="terminal">
+      <div class="terminal-header">
+        <span class="terminal-dot r"></span>
+        <span class="terminal-dot y"></span>
+        <span class="terminal-dot g"></span>
+        <span class="terminal-title">cobot &mdash; session</span>
+      </div>
+      <div class="terminal-body">
+        <div class="terminal-line">
+          <span class="prompt">$</span>
+          <span class="cmd">pip install cobot</span>
+        </div>
+        <div class="terminal-line">
+          <span class="prompt">$</span>
+          <span class="cmd">cobot run</span>
+        </div>
+        <div class="terminal-line">
+          <span class="output">[cobot] loading plugins...</span>
+        </div>
+        <div class="terminal-line">
+          <span class="success">&check; config</span>
+          <span class="output">&nbsp;&middot;&nbsp;</span>
+          <span class="success">&check; ppq</span>
+          <span class="output">&nbsp;&middot;&nbsp;</span>
+          <span class="success">&check; nostr</span>
+          <span class="output">&nbsp;&middot;&nbsp;</span>
+          <span class="success">&check; wallet</span>
+          <span class="output">&nbsp;&middot;&nbsp;</span>
+          <span class="success">&check; tools</span>
+        </div>
+        <div class="terminal-line">
+          <span class="nostr">[nostr]</span>
+          <span class="output">connected to wss://relay.damus.io</span>
+        </div>
+        <div class="terminal-line">
+          <span class="nostr">[nostr]</span>
+          <span class="output">identity: npub1qz8...x4f7</span>
+        </div>
+        <div class="terminal-line">
+          <span class="lightning">[wallet]</span>
+          <span class="output">balance: 47,250 sats</span>
+        </div>
+        <div class="terminal-line">
+          <span class="output">&nbsp;</span>
+        </div>
+        <div class="terminal-line">
+          <span class="success">[cobot]</span>
+          <span class="output">agent ready. listening for messages.</span>
+        </div>
+        <div class="terminal-line">
+          <span class="prompt">_</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Stack -->
+<section class="stack-section" id="stack">
+  <div class="container">
+    <div class="section-label reveal">Sovereignty Stack</div>
+    <h2 class="section-title reveal">Five layers. Full control.</h2>
+    <p class="section-desc reveal">
+      Every layer is yours. No vendor lock-in. No API keys you don't own.
+      Swap any component without touching the others.
+    </p>
+
+    <div class="stack">
+      <div class="stack-layer" data-layer="hardware">
+        <div>
+          <div class="stack-layer-name">Your Hardware</div>
+          <div class="stack-layer-detail">Physical control</div>
+        </div>
+        <span class="stack-icon">&#9633;</span>
+      </div>
+      <div class="stack-layer" data-layer="runtime">
+        <div>
+          <div class="stack-layer-name">Cobot Runtime</div>
+          <div class="stack-layer-detail">Self-hosted &middot; ~2K lines</div>
+        </div>
+        <span class="stack-icon">&#9881;</span>
+      </div>
+      <div class="stack-layer" data-layer="identity">
+        <div>
+          <div class="stack-layer-name">Nostr Identity</div>
+          <div class="stack-layer-detail">npub / nsec &middot; Cryptographic</div>
+        </div>
+        <span class="stack-icon">&#128273;</span>
+      </div>
+      <div class="stack-layer" data-layer="wallet">
+        <div>
+          <div class="stack-layer-name">Lightning Wallet</div>
+          <div class="stack-layer-detail">npub.cash &middot; Self-sovereign money</div>
+        </div>
+        <span class="stack-icon">&#9889;</span>
+      </div>
+      <div class="stack-layer" data-layer="llm">
+        <div>
+          <div class="stack-layer-name">LLM Provider</div>
+          <div class="stack-layer-detail">Local or cloud &middot; Your choice</div>
+        </div>
+        <span class="stack-icon">&#9670;</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Features -->
+<section id="features">
+  <div class="container">
+    <div class="section-label reveal">Capabilities</div>
+    <h2 class="section-title reveal">Everything an agent needs.<br>Nothing it doesn't.</h2>
+    <p class="section-desc reveal">
+      No bloat. No framework tax. Just the primitives for a self-sovereign agent.
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">&#9889;</div>
+        <h3>Lightning Wallet</h3>
+        <p>Send and receive sats autonomously. Your agent has its own money via npub.cash.</p>
+        <span class="feature-tag">npub.cash</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128273;</div>
+        <h3>Nostr Identity</h3>
+        <p>Cryptographic identity via npub/nsec. Communicate through Nostr relays with NIP-04 DMs.</p>
+        <span class="feature-tag">NIP-04</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128268;</div>
+        <h3>Plugin Architecture</h3>
+        <p>Everything is a plugin. Drop modules into /plugins and they auto-register with dependency resolution.</p>
+        <span class="feature-tag">extensible</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128257;</div>
+        <h3>Hot Reload</h3>
+        <p>Modify plugins at runtime. Cobot watches for changes and restarts automatically.</p>
+        <span class="feature-tag">zero downtime</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#129302;</div>
+        <h3>Multi-LLM</h3>
+        <p>PPQ, Ollama, OpenRouter, and more. Run local models or connect to cloud providers.</p>
+        <span class="feature-tag">flexible</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128196;</div>
+        <h3>FileDrop</h3>
+        <p>File-based communication channel with Schnorr signature verification. Agents exchange signed messages.</p>
+        <span class="feature-tag">Schnorr</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Plugins -->
+<section class="plugins-section" id="plugins">
+  <div class="container">
+    <div class="section-label reveal">Plugin Registry</div>
+    <h2 class="section-title reveal">Built-in plugins</h2>
+    <p class="section-desc reveal">
+      Ship with sensible defaults. Replace anything.
+    </p>
+
+    <table class="plugin-table">
+      <thead>
+        <tr>
+          <th>Plugin</th>
+          <th>Capability</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="plugin-name">config</span></td>
+          <td><span class="plugin-cap cap-sys">system</span></td>
+          <td class="plugin-desc">Configuration management</td>
+        </tr>
+        <tr>
+          <td><span class="plugin-name">ppq</span></td>
+          <td><span class="plugin-cap cap-llm">llm</span></td>
+          <td class="plugin-desc">PPQ.ai LLM provider</td>
+        </tr>
+        <tr>
+          <td><span class="plugin-name">ollama</span></td>
+          <td><span class="plugin-cap cap-llm">llm</span></td>
+          <td class="plugin-desc">Local Ollama models</td>
+        </tr>
+        <tr>
+          <td><span class="plugin-name">nostr</span></td>
+          <td><span class="plugin-cap cap-comm">communication</span></td>
+          <td class="plugin-desc">Nostr DMs via NIP-04</td>
+        </tr>
+        <tr>
+          <td><span class="plugin-name">filedrop</span></td>
+          <td><span class="plugin-cap cap-comm">communication</span></td>
+          <td class="plugin-desc">File-based messaging with signatures</td>
+        </tr>
+        <tr>
+          <td><span class="plugin-name">wallet</span></td>
+          <td><span class="plugin-cap cap-wallet">wallet</span></td>
+          <td class="plugin-desc">Lightning via npub.cash</td>
+        </tr>
+        <tr>
+          <td><span class="plugin-name">tools</span></td>
+          <td><span class="plugin-cap cap-tools">tools</span></td>
+          <td class="plugin-desc">Shell &amp; file operations</td>
+        </tr>
+        <tr>
+          <td><span class="plugin-name">hotreload</span></td>
+          <td><span class="plugin-cap cap-sys">system</span></td>
+          <td class="plugin-desc">Auto-restart on plugin changes</td>
+        </tr>
+        <tr>
+          <td><span class="plugin-name">security</span></td>
+          <td><span class="plugin-cap cap-sys">system</span></td>
+          <td class="plugin-desc">Prompt injection shield</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Extension Points -->
+<section class="ext-section" id="extensions">
+  <div class="container">
+    <div class="section-label reveal">Extension Points</div>
+    <h2 class="section-title reveal">Plugins that extend plugins.</h2>
+    <p class="section-desc reveal">
+      Cobot's unique feature: plugins can define hooks that other plugins implement.
+      Composable by design.
+    </p>
+
+    <div class="ext-diagram reveal">
+      <div class="ext-box">
+        <div class="ext-box-label">Defines</div>
+        <div class="ext-box-name">filedrop</div>
+      </div>
+      <span class="ext-arrow">&rarr;</span>
+      <div class="ext-box" style="border-color: var(--amber-dim);">
+        <div class="ext-box-label">Extension Point</div>
+        <div class="ext-box-name" style="color: var(--amber);">filedrop.verify</div>
+      </div>
+      <span class="ext-arrow">&larr;</span>
+      <div class="ext-box">
+        <div class="ext-box-label">Implements</div>
+        <div class="ext-box-name">filedrop-nostr</div>
+      </div>
+    </div>
+
+    <div class="ext-code reveal">
+      <div class="ext-code-block">
+        <div class="ext-code-label"><span class="dot define"></span> Defining extension points</div>
+        <pre><span class="cm"># filedrop/plugin.py</span>
+<span class="var">meta</span> = <span class="fn">PluginMeta</span>(
+    <span class="var">id</span>=<span class="str">"filedrop"</span>,
+    <span class="var">extension_points</span>=[
+        <span class="str">"filedrop.before_write"</span>,
+        <span class="str">"filedrop.after_read"</span>,
+    ],
+)</pre>
+      </div>
+      <div class="ext-code-block">
+        <div class="ext-code-label"><span class="dot implement"></span> Implementing them</div>
+        <pre><span class="cm"># filedrop-nostr/plugin.py</span>
+<span class="var">meta</span> = <span class="fn">PluginMeta</span>(
+    <span class="var">id</span>=<span class="str">"filedrop-nostr"</span>,
+    <span class="var">implements</span>={
+        <span class="str">"filedrop.before_write"</span>: <span class="str">"sign"</span>,
+        <span class="str">"filedrop.after_read"</span>: <span class="str">"verify"</span>,
+    },
+)</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Architecture -->
+<section class="arch-section" id="architecture">
+  <div class="container">
+    <div class="section-label reveal">Internals</div>
+    <h2 class="section-title reveal">Architecture</h2>
+    <p class="section-desc reveal">
+      Clean separation. Every layer has a single job.
+    </p>
+
+    <div class="arch-diagram reveal">
+      <div class="arch-row">
+        <div class="arch-row-label">Plugin Registry</div>
+        <div class="arch-row-content">
+          <span class="arch-chip">Registration</span>
+          <span class="arch-chip">Dependency Resolution</span>
+          <span class="arch-chip">Extension Points</span>
+        </div>
+      </div>
+      <div class="arch-row">
+        <div class="arch-row-label">Plugins</div>
+        <div class="arch-row-content">
+          <span class="arch-chip">config</span>
+          <span class="arch-chip">llm</span>
+          <span class="arch-chip">comms</span>
+          <span class="arch-chip">wallet</span>
+          <span class="arch-chip">tools</span>
+          <span class="arch-chip">security</span>
+        </div>
+      </div>
+      <div class="arch-row">
+        <div class="arch-row-label">Extension Points</div>
+        <div class="arch-row-desc">Plugins define hooks &rarr; Others implement</div>
+      </div>
+      <div class="arch-row">
+        <div class="arch-row-label">Hook Chain</div>
+        <div class="arch-row-content">
+          <span class="arch-chip">on_message</span>
+          <span class="arch-chip" style="color: var(--text-muted);">&rarr;</span>
+          <span class="arch-chip">transform</span>
+          <span class="arch-chip" style="color: var(--text-muted);">&rarr;</span>
+          <span class="arch-chip">llm_call</span>
+          <span class="arch-chip" style="color: var(--text-muted);">&rarr;</span>
+          <span class="arch-chip">tool_exec</span>
+          <span class="arch-chip" style="color: var(--text-muted);">&rarr;</span>
+          <span class="arch-chip">response</span>
+        </div>
+      </div>
+      <div class="arch-row">
+        <div class="arch-row-label">Core Agent</div>
+        <div class="arch-row-content">
+          <span class="arch-chip">Message Loop</span>
+          <span class="arch-chip">Tool Execution</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- CLI Reference -->
+<section class="cli-section" id="cli">
+  <div class="container">
+    <div class="section-label reveal">CLI</div>
+    <h2 class="section-title reveal">Commands</h2>
+
+    <div class="cli-grid reveal">
+      <div class="cli-item">
+        <span class="cli-cmd">cobot run</span>
+        <span class="cli-desc">Start the agent</span>
+      </div>
+      <div class="cli-item">
+        <span class="cli-cmd">cobot run --stdin</span>
+        <span class="cli-desc">Interactive mode</span>
+      </div>
+      <div class="cli-item">
+        <span class="cli-cmd">cobot status</span>
+        <span class="cli-desc">Show agent status</span>
+      </div>
+      <div class="cli-item">
+        <span class="cli-cmd">cobot restart</span>
+        <span class="cli-desc">Restart running agent</span>
+      </div>
+      <div class="cli-item">
+        <span class="cli-cmd">cobot wallet balance</span>
+        <span class="cli-desc">Check wallet balance</span>
+      </div>
+      <div class="cli-item">
+        <span class="cli-cmd">cobot wallet address</span>
+        <span class="cli-desc">Show Lightning address</span>
+      </div>
+      <div class="cli-item">
+        <span class="cli-cmd">cobot config show</span>
+        <span class="cli-desc">Show configuration</span>
+      </div>
+      <div class="cli-item">
+        <span class="cli-cmd">cobot config validate</span>
+        <span class="cli-desc">Validate config file</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Quick Start -->
+<section class="quickstart-section" id="quickstart">
+  <div class="container">
+    <div class="section-label reveal">Get Running</div>
+    <h2 class="section-title reveal">Three steps. Two minutes.</h2>
+
+    <div class="quickstart-steps">
+      <div class="qs-step reveal">
+        <div class="qs-step-num">1</div>
+        <div class="qs-step-content">
+          <div class="qs-step-title">Install</div>
+          <div class="qs-step-code">
+            <button class="copy-btn" onclick="copyCode(this)">copy</button>
+            <span class="prompt-char">$ </span>git clone https://github.com/ultanio/cobot<br>
+            <span class="prompt-char">$ </span>cd cobot && pip install -e .
+          </div>
+        </div>
+      </div>
+      <div class="qs-step reveal">
+        <div class="qs-step-num">2</div>
+        <div class="qs-step-content">
+          <div class="qs-step-title">Configure</div>
+          <div class="qs-step-code">
+            <button class="copy-btn" onclick="copyCode(this)">copy</button>
+            <span class="prompt-char">$ </span>cp cobot.yml.example cobot.yml<br>
+            <span class="prompt-char">$ </span>$EDITOR cobot.yml
+          </div>
+        </div>
+      </div>
+      <div class="qs-step reveal">
+        <div class="qs-step-num">3</div>
+        <div class="qs-step-content">
+          <div class="qs-step-title">Run</div>
+          <div class="qs-step-code">
+            <button class="copy-btn" onclick="copyCode(this)">copy</button>
+            <span class="prompt-char">$ </span>cobot run
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- Why Cobot -->
+<section class="why-section" id="why">
+  <div class="container">
+    <div class="section-label reveal">Comparison</div>
+    <h2 class="section-title reveal">Why Cobot?</h2>
+
+    <table class="compare-table reveal">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th class="highlight">Cobot</th>
+          <th>Heavy Frameworks</th>
+          <th>Cloud Agents</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Codebase</td>
+          <td class="highlight"><span class="check">~2K lines</span></td>
+          <td>430K+ lines</td>
+          <td>Closed source</td>
+        </tr>
+        <tr>
+          <td>Self-sovereign</td>
+          <td class="highlight"><span class="check">&#10003; Full</span></td>
+          <td><span class="partial">Partial</span></td>
+          <td><span class="cross">&#10005; Cloud</span></td>
+        </tr>
+        <tr>
+          <td>Nostr identity</td>
+          <td class="highlight"><span class="check">&#10003; Native</span></td>
+          <td><span class="cross">&#10005;</span></td>
+          <td><span class="cross">&#10005;</span></td>
+        </tr>
+        <tr>
+          <td>Lightning wallet</td>
+          <td class="highlight"><span class="check">&#10003; Native</span></td>
+          <td><span class="cross">&#10005;</span></td>
+          <td><span class="cross">&#10005;</span></td>
+        </tr>
+        <tr>
+          <td>Extension points</td>
+          <td class="highlight"><span class="check">&#10003; Unique</span></td>
+          <td><span class="cross">&#10005;</span></td>
+          <td><span class="cross">&#10005;</span></td>
+        </tr>
+        <tr>
+          <td>Hot reload</td>
+          <td class="highlight"><span class="check">&#10003;</span></td>
+          <td><span class="cross">&#10005;</span></td>
+          <td><span class="cross">&#10005;</span></td>
+        </tr>
+        <tr>
+          <td>Plugin system</td>
+          <td class="highlight"><span class="check">&#10003;</span></td>
+          <td><span class="check">&#10003;</span></td>
+          <td><span class="partial">Varies</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <div class="footer-brand-name">
+          <div class="nav-logo-icon" style="width:22px;height:22px;font-size:11px;border-radius:5px;">C</div>
+          cobot
+        </div>
+        <p class="footer-brand-desc">
+          Self-sovereign AI agent. Your keys, your identity, your rules.
+          Built with care by Ultanio.
+        </p>
+      </div>
+      <div class="footer-links">
+        <div class="footer-col">
+          <h4>Project</h4>
+          <a href="https://github.com/ultanio/cobot" target="_blank" rel="noopener">Source Code</a>
+          <a href="https://github.com/ultanio/cobot/issues" target="_blank" rel="noopener">Issues</a>
+          <a href="https://github.com/ultanio/cobot/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
+          <a href="https://github.com/ultanio/cobot/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+        </div>
+        <div class="footer-col">
+          <h4>Ecosystem</h4>
+          <a href="https://nostr.com" target="_blank" rel="noopener">Nostr Protocol</a>
+          <a href="https://lightning.network" target="_blank" rel="noopener">Lightning Network</a>
+          <a href="https://npub.cash" target="_blank" rel="noopener">npub.cash</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>&copy; 2025 Ultanio. Built with &#9889; by agents, for agents.</span>
+      <a href="https://ultanio.org" target="_blank" rel="noopener">ultanio.org</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Scroll-triggered reveal animations
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal, .feature-card, .stack-layer').forEach(el => {
+  observer.observe(el);
+});
+
+// Stagger feature cards
+document.querySelectorAll('.feature-card').forEach((card, i) => {
+  card.style.transitionDelay = `${i * 0.08}s`;
+});
+
+// Stagger stack layers
+document.querySelectorAll('.stack-layer').forEach((layer, i) => {
+  layer.style.transitionDelay = `${i * 0.1}s`;
+});
+
+// Copy button
+function copyCode(btn) {
+  const code = btn.parentElement.textContent.replace('copy', '').replace(/\$ /g, '').trim();
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 2000);
+  });
+}
+
+// Smooth scroll for nav links
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+  link.addEventListener('click', (e) => {
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) {
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+
+// Nav background on scroll
+const nav = document.querySelector('nav');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 50) {
+    nav.style.background = 'rgba(6, 7, 10, 0.95)';
+    nav.style.borderBottomColor = 'var(--border-bright)';
+  } else {
+    nav.style.background = 'rgba(6, 7, 10, 0.8)';
+    nav.style.borderBottomColor = 'var(--border)';
+  }
+}, { passive: true });
+</script>
+</body>
+</html>
