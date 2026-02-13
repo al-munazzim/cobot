@@ -75,13 +75,13 @@ class CommunicationPlugin(Plugin):
         """Store configuration."""
         self._config = config
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Initialize communication aggregator."""
         if self._registry is None:
             self._registry = get_registry()
         print("[Communication] Ready (extension point definer)", file=sys.stderr)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 

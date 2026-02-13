@@ -1,6 +1,8 @@
 """Plugin base class and metadata.
 
 All plugins must inherit from Plugin and define a PluginMeta.
+
+NOTE: As of v0.2.0, all plugin lifecycle methods are async.
 """
 
 from abc import ABC, abstractmethod
@@ -65,11 +67,11 @@ class Plugin(ABC):
 
     meta: PluginMeta  # Must be defined by subclass
 
-    @abstractmethod
     def configure(self, config: dict) -> None:
         """Receive plugin-specific configuration.
 
         Called before start(). Config is the plugin's section from cobot.yml.
+        This method is intentionally synchronous - config is just assignment.
 
         Args:
             config: Plugin-specific config dict (may be empty)
@@ -77,7 +79,7 @@ class Plugin(ABC):
         pass
 
     @abstractmethod
-    def start(self) -> None:
+    async def start(self) -> None:
         """Initialize the plugin.
 
         Called after all plugins are configured, in dependency order.
@@ -86,7 +88,7 @@ class Plugin(ABC):
         pass
 
     @abstractmethod
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Clean up plugin resources.
 
         Called on shutdown, in reverse dependency order.
@@ -96,48 +98,49 @@ class Plugin(ABC):
 
     # --- Optional Hook Methods ---
     # Override these to handle lifecycle events
+    # All hooks are async to allow non-blocking operations
 
-    def on_message_received(self, ctx: dict) -> dict:
+    async def on_message_received(self, ctx: dict) -> dict:
         """Called when a message is received."""
         return ctx
 
-    def transform_system_prompt(self, ctx: dict) -> dict:
+    async def transform_system_prompt(self, ctx: dict) -> dict:
         """Called to transform the system prompt."""
         return ctx
 
-    def transform_history(self, ctx: dict) -> dict:
+    async def transform_history(self, ctx: dict) -> dict:
         """Called to transform conversation history."""
         return ctx
 
-    def on_before_llm_call(self, ctx: dict) -> dict:
+    async def on_before_llm_call(self, ctx: dict) -> dict:
         """Called before LLM inference."""
         return ctx
 
-    def on_after_llm_call(self, ctx: dict) -> dict:
+    async def on_after_llm_call(self, ctx: dict) -> dict:
         """Called after LLM inference."""
         return ctx
 
-    def on_before_tool_exec(self, ctx: dict) -> dict:
+    async def on_before_tool_exec(self, ctx: dict) -> dict:
         """Called before tool execution."""
         return ctx
 
-    def on_after_tool_exec(self, ctx: dict) -> dict:
+    async def on_after_tool_exec(self, ctx: dict) -> dict:
         """Called after tool execution."""
         return ctx
 
-    def transform_response(self, ctx: dict) -> dict:
+    async def transform_response(self, ctx: dict) -> dict:
         """Called to transform the response before sending."""
         return ctx
 
-    def on_before_send(self, ctx: dict) -> dict:
+    async def on_before_send(self, ctx: dict) -> dict:
         """Called before sending a message."""
         return ctx
 
-    def on_after_send(self, ctx: dict) -> dict:
+    async def on_after_send(self, ctx: dict) -> dict:
         """Called after sending a message."""
         return ctx
 
-    def on_error(self, ctx: dict) -> dict:
+    async def on_error(self, ctx: dict) -> dict:
         """Called when an error occurs."""
         return ctx
 

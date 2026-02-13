@@ -33,11 +33,11 @@ class ContextPlugin(Plugin):
         """Store configuration."""
         self._config = config
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Initialize context builder."""
         print("[Context] Ready", file=sys.stderr)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 

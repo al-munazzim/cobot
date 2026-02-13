@@ -4,6 +4,8 @@ Note: These tests require pynostr to be installed.
 Some tests are skipped if pynostr is not available.
 """
 
+import asyncio
+
 import pytest
 
 # Check if pynostr is available
@@ -66,12 +68,13 @@ class TestNostrPluginIdentity:
 
         plugin = create_plugin()
         plugin.configure({"nostr": {}})  # No nsec
-        plugin.start()
+        asyncio.run(plugin.start())
 
         identity = plugin.get_identity()
         assert identity == {}
 
     def test_get_identity_when_initialized(self):
+
         plugin = create_plugin()
         # Use a valid test nsec
         plugin.configure(
@@ -81,7 +84,7 @@ class TestNostrPluginIdentity:
                 }
             }
         )
-        plugin.start()
+        asyncio.run(plugin.start())
 
         identity = plugin.get_identity()
         assert "npub" in identity
@@ -98,7 +101,7 @@ class TestNostrPluginSend:
 
         plugin = create_plugin()
         plugin.configure({"nostr": {}})
-        plugin.start()
+        asyncio.run(plugin.start())
 
         with pytest.raises(CommunicationError) as exc_info:
             plugin.send("npub1...", "hello")
@@ -113,7 +116,7 @@ class TestNostrPluginSend:
                 }
             }
         )
-        plugin.start()
+        asyncio.run(plugin.start())
 
         # pynostr may raise different errors for invalid npubs
         with pytest.raises((CommunicationError, Exception)) as exc_info:
@@ -185,7 +188,7 @@ class TestNostrPluginIntegration:
                 }
             }
         )
-        plugin.start()
+        asyncio.run(plugin.start())
 
         messages = plugin.receive(since_minutes=60)
         # Just check it doesn't crash

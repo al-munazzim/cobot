@@ -36,7 +36,7 @@ class SoulPlugin(Plugin):
         if "_workspace_path" in config:
             self._workspace_path = Path(config["_workspace_path"])
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Load SOUL.md from workspace."""
         # Try to get workspace from registry if available
         if self._registry:
@@ -54,7 +54,7 @@ class SoulPlugin(Plugin):
         else:
             self._soul = ""
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 

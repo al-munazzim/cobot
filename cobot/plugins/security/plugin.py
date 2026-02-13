@@ -40,13 +40,13 @@ class SecurityPlugin(Plugin):
         )
         self._use_llm = security_config.get("use_llm_layer", True)
 
-    def start(self) -> None:
+    async def start(self) -> None:
         if self._shield_script and self._shield_script.exists():
             print("[Security] Shield initialized", file=sys.stderr)
         else:
             print("[Security] Warning: Shield script not found", file=sys.stderr)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         pass
 
     def _check_injection(self, text: str) -> dict:
@@ -77,7 +77,7 @@ class SecurityPlugin(Plugin):
         except Exception as e:
             return {"flagged": False, "reason": str(e)}
 
-    def on_message_received(self, ctx: dict) -> dict:
+    async def on_message_received(self, ctx: dict) -> dict:
         """Check incoming messages for injection."""
         message = ctx.get("message", "")
         if not message:

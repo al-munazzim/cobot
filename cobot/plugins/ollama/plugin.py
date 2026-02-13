@@ -40,7 +40,7 @@ class OllamaPlugin(Plugin, LLMProvider):
         self._host = self._host.rstrip("/")
         self._model = ollama_config.get("model", "llama3.2:latest")
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Test connection to Ollama."""
         try:
             models = self.list_models()
@@ -52,7 +52,7 @@ class OllamaPlugin(Plugin, LLMProvider):
         except LLMError as e:
             print(f"[Ollama] Warning: {e}", file=sys.stderr)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 

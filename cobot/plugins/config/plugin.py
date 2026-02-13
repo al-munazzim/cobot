@@ -141,12 +141,12 @@ class ConfigPlugin(Plugin):
         # Find and load config file
         self._config = self._load_config_file()
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Config is already loaded in configure()."""
         if self._config:
             print(f"[Config] Provider: {self._config.provider}", file=sys.stderr)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 

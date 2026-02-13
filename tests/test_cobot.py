@@ -1,9 +1,10 @@
 """Tests for main Cobot agent class."""
 
+import asyncio
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, AsyncMock, patch
 
 import pytest
 
@@ -115,7 +116,9 @@ class TestCobot:
         """Should return LLM response."""
         bot = Cobot(mock_registry)
 
-        response = bot.respond("Hi there")
+        with patch("cobot.agent.run", new_callable=AsyncMock) as mock_run:
+            mock_run.return_value = {"prompt": bot.soul, "messages": []}
+            response = asyncio.run(bot.respond("Hi there"))
 
         assert response == "Hello human!"
         mock_registry.get_by_capability("llm").chat.assert_called_once()
@@ -125,7 +128,9 @@ class TestCobot:
         mock_registry.get_by_capability = Mock(return_value=None)
 
         bot = Cobot(mock_registry)
-        response = bot.respond("Hi")
+        with patch("cobot.agent.run", new_callable=AsyncMock) as mock_run:
+            mock_run.return_value = {}
+            response = asyncio.run(bot.respond("Hi"))
 
         assert "Error" in response
         assert "No LLM" in response
@@ -136,7 +141,9 @@ class TestCobot:
         llm_plugin.chat.side_effect = LLMError("API failed")
 
         bot = Cobot(mock_registry)
-        response = bot.respond("Hi")
+        with patch("cobot.agent.run", new_callable=AsyncMock) as mock_run:
+            mock_run.return_value = {"prompt": bot.soul}
+            response = asyncio.run(bot.respond("Hi"))
 
         assert "Error" in response
         assert "API failed" in response
@@ -159,16 +166,25 @@ class TestCommunicationIntegration:
             timestamp=datetime.now(),
         )
 
-        bot.handle_message(msg)
+        with patch("cobot.agent.run", new_callable=AsyncMock) as mock_run:
+            mock_run.return_value = {"message": "Hello bot!", "prompt": bot.soul}
+            asyncio.run(bot.handle_message(msg))
 
         # Should have called LLM
         mock_registry.get_by_capability("llm").chat.assert_called_once()
 
-        # Should have shown typing indicator
-        comm = mock_registry.get("communication")
-        comm.typing.assert_called_once_with("telegram", "-100123")
+        # Should have called on_before_llm_call with channel info (for typing via hook)
+        llm_call_ctx = None
+        for call in mock_run.call_args_list:
+            if call[0][0] == "on_before_llm_call":
+                llm_call_ctx = call[0][1]
+                break
+        assert llm_call_ctx is not None
+        assert llm_call_ctx["channel_type"] == "telegram"
+        assert llm_call_ctx["channel_id"] == "-100123"
 
         # Should have sent response via communication
+        comm = mock_registry.get("communication")
         comm.send.assert_called_once()
         call_args = comm.send.call_args
         outgoing = call_args[0][0]
@@ -193,8 +209,10 @@ class TestCommunicationIntegration:
         )
 
         # Process same message twice
-        bot.handle_message(msg)
-        bot.handle_message(msg)
+        with patch("cobot.agent.run", new_callable=AsyncMock) as mock_run:
+            mock_run.return_value = {"message": "Hello!", "prompt": bot.soul}
+            asyncio.run(bot.handle_message(msg))
+            asyncio.run(bot.handle_message(msg))
 
         # LLM should only be called once
         assert mock_registry.get_by_capability("llm").chat.call_count == 1
@@ -224,7 +242,9 @@ class TestCommunicationIntegration:
         ]
 
         bot = Cobot(mock_registry)
-        count = bot.poll()
+        with patch("cobot.agent.run", new_callable=AsyncMock) as mock_run:
+            mock_run.return_value = {"message": "test", "prompt": bot.soul}
+            count = asyncio.run(bot.poll())
 
         assert count == 2
         assert mock_registry.get_by_capability("llm").chat.call_count == 2
@@ -235,7 +255,9 @@ class TestCommunicationIntegration:
         comm.poll.side_effect = Exception("Connection failed")
 
         bot = Cobot(mock_registry)
-        count = bot.poll()
+        with patch("cobot.agent.run", new_callable=AsyncMock) as mock_run:
+            mock_run.return_value = {}
+            count = asyncio.run(bot.poll())
 
         assert count == 0  # No crash, returns 0
 
@@ -244,7 +266,7 @@ class TestCommunicationIntegration:
         mock_registry.get = Mock(return_value=None)
 
         bot = Cobot(mock_registry)
-        count = bot.poll()
+        count = asyncio.run(bot.poll())
 
         assert count == 0
 
@@ -281,7 +303,9 @@ class TestToolCalls:
         ]
 
         bot = Cobot(mock_registry)
-        response = bot.respond("Read test.txt")
+        with patch("cobot.agent.run", new_callable=AsyncMock) as mock_run:
+            mock_run.return_value = {"prompt": bot.soul, "text": "File contents: hello"}
+            response = asyncio.run(bot.respond("Read test.txt"))
 
         assert response == "File contents: hello"
         assert llm_plugin.chat.call_count == 2
