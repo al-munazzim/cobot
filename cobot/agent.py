@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 from cobot.plugins import (
-    init_plugins, get_registry, run,
+    init_plugins, run,
     LLMProvider, CommunicationProvider, ToolProvider,
     LLMError, CommunicationError,
 )
@@ -63,7 +63,7 @@ class Cobot:
         
         try:
             subprocess.run(["systemctl", "--user", "restart", "cobot"], check=True, timeout=5)
-        except:
+        except Exception:
             os.execv(sys.executable, [sys.executable] + sys.argv)
     
     def respond(self, message: str, sender: str = "unknown") -> str:

@@ -24,12 +24,12 @@ dependencies = [
 
 [project.optional-dependencies]
 nostr = [
-    "secp256k1>=0.14",
-    "bech32>=1.2",
+    "pynostr>=0.6",
 ]
 dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.23",
+    "ruff>=0.2",
 ]
 all = [
     "cobot[nostr,dev]",
@@ -39,10 +39,10 @@ all = [
 cobot = "cobot.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/bridio/cobot"
-Documentation = "https://github.com/bridio/cobot#readme"
-Repository = "https://github.com/bridio/cobot"
-Issues = "https://github.com/bridio/cobot/issues"
+Homepage = "https://github.com/ultanio/cobot"
+Documentation = "https://github.com/ultanio/cobot#readme"
+Repository = "https://github.com/ultanio/cobot"
+Issues = "https://github.com/ultanio/cobot/issues"
 
 [build-system]
 requires = ["setuptools>=61.0"]
