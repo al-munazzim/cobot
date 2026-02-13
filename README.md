@@ -86,7 +86,7 @@ pip install -e .
 The easiest way to configure Cobot is the interactive wizard:
 
 ```bash
-cobot init
+cobot wizard init
 ```
 
 The wizard will guide you through:
@@ -246,14 +246,20 @@ Each plugin needs a `plugin.py` with a `create_plugin()` factory function.
 ## CLI Reference
 
 ```bash
+# Core
 cobot run              # Start the agent
-cobot run --stdin      # Interactive mode
+cobot run --stdin      # Interactive mode (no Nostr)
 cobot status           # Show status
 cobot restart          # Restart running agent
-cobot wallet balance   # Check wallet balance
-cobot wallet address   # Show Lightning address
-cobot config show      # Show configuration
+
+# Setup
+cobot wizard init      # Interactive setup wizard
+cobot wizard plugins   # List plugins with wizard sections
+
+# Configuration
+cobot config show      # Show current configuration
 cobot config validate  # Validate configuration
+cobot config edit      # Edit config in $EDITOR
 ```
 
 ## Why Cobot?
