@@ -72,7 +72,13 @@ class Cobot:
         except Exception:
             os.execv(sys.executable, [sys.executable] + sys.argv)
 
-    async def respond(self, message: str, sender: str = "unknown") -> str:
+    async def respond(
+        self,
+        message: str,
+        sender: str = "unknown",
+        channel_type: str = "",
+        channel_id: str = "",
+    ) -> str:
         """Generate a response to a message."""
         llm = self._get_llm()
         tools = self._get_tools()
@@ -118,6 +124,8 @@ class Cobot:
                         "messages": messages,
                         "model": self._config.provider if self._config else "unknown",
                         "tools": tool_defs,
+                        "channel_type": channel_type,
+                        "channel_id": channel_id,
                     },
                 )
                 if ctx.get("abort"):
@@ -236,13 +244,13 @@ class Cobot:
         if ctx.get("abort"):
             return
 
-        # Show typing indicator
-        comm = self._get_comm()
-        if comm:
-            comm.typing(msg.channel_type, msg.channel_id)
-
         message = ctx.get("message", msg.content)
-        response_text = await self.respond(message, sender=msg.sender_name)
+        response_text = await self.respond(
+            message,
+            sender=msg.sender_name,
+            channel_type=msg.channel_type,
+            channel_id=msg.channel_id,
+        )
 
         # Hook: on_before_send
         ctx = await run(
@@ -253,6 +261,7 @@ class Cobot:
         response_text = ctx.get("text", response_text)
 
         # Send response via communication plugin
+        comm = self._get_comm()
         if comm:
             success = comm.send(
                 OutgoingMessage(

@@ -173,11 +173,18 @@ class TestCommunicationIntegration:
         # Should have called LLM
         mock_registry.get_by_capability("llm").chat.assert_called_once()
 
-        # Should have shown typing indicator
-        comm = mock_registry.get("communication")
-        comm.typing.assert_called_once_with("telegram", "-100123")
+        # Should have called on_before_llm_call with channel info (for typing via hook)
+        llm_call_ctx = None
+        for call in mock_run.call_args_list:
+            if call[0][0] == "on_before_llm_call":
+                llm_call_ctx = call[0][1]
+                break
+        assert llm_call_ctx is not None
+        assert llm_call_ctx["channel_type"] == "telegram"
+        assert llm_call_ctx["channel_id"] == "-100123"
 
         # Should have sent response via communication
+        comm = mock_registry.get("communication")
         comm.send.assert_called_once()
         call_args = comm.send.call_args
         outgoing = call_args[0][0]
