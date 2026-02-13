@@ -55,9 +55,12 @@ class FileDropPlugin(Plugin, CommunicationProvider):
 
     def start(self) -> None:
         """Initialize directories."""
-        # Create base directory
+        # Create base directory if it doesn't exist
         self._base_dir.mkdir(parents=True, exist_ok=True)
-        os.chmod(self._base_dir, 0o777)  # World-writable for multi-agent
+        try:
+            os.chmod(self._base_dir, 0o777)  # World-writable for multi-agent
+        except PermissionError:
+            pass  # Already exists with different owner, that's fine
 
         # Create our inbox
         self._inbox = self._base_dir / self._identity / "inbox"
