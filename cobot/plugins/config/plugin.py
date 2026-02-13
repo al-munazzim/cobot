@@ -18,8 +18,8 @@ from ..base import Plugin, PluginMeta
 def _expand_env_vars(value: Any) -> Any:
     """Recursively expand ${VAR} and ${VAR:-default} in strings."""
     if isinstance(value, str):
-        pattern = r'\$\{([^}:]+)(?::-([^}]*))?\}'
-        
+        pattern = r"\$\{([^}:]+)(?::-([^}]*))?\}"
+
         def replacer(match):
             var_name = match.group(1)
             default = match.group(2)
@@ -30,7 +30,7 @@ def _expand_env_vars(value: Any) -> Any:
                 return default
             else:
                 return ""
-        
+
         return re.sub(pattern, replacer, value)
     elif isinstance(value, dict):
         return {k: _expand_env_vars(v) for k, v in value.items()}
@@ -43,59 +43,59 @@ def _expand_env_vars(value: Any) -> Any:
 @dataclass
 class CobotConfig:
     """Parsed configuration object."""
-    
+
     # Which plugins are enabled
     enabled_plugins: list[str] = field(default_factory=list)
     disabled_plugins: list[str] = field(default_factory=list)
-    
+
     # LLM provider selection
     provider: str = "ppq"
-    
+
     # Core settings
     identity_name: str = "Cobot"
     polling_interval: int = 30
-    
+
     # Paths
     skills_path: Path = field(default_factory=lambda: Path("./skills"))
     memory_path: Path = field(default_factory=lambda: Path("./memory"))
     plugins_path: Path = field(default_factory=lambda: Path("./cobot/plugins"))
     soul_path: Path = field(default_factory=lambda: Path("./SOUL.md"))
-    
+
     # Exec settings
     exec_enabled: bool = True
     exec_allowlist: list[str] = field(default_factory=list)
     exec_blocklist: list[str] = field(default_factory=list)
     exec_timeout: int = 30
-    
+
     # Raw config for plugin access
     _raw: dict = field(default_factory=dict)
-    
+
     def get_plugin_config(self, plugin_id: str) -> dict:
         """Get config section for a specific plugin."""
         return self._raw.get(plugin_id, {})
-    
+
     @classmethod
     def from_dict(cls, data: dict) -> "CobotConfig":
         """Create config from dictionary."""
         data = _expand_env_vars(data)
-        
+
         # Parse plugins section
         plugins_section = data.get("plugins", {})
         enabled = plugins_section.get("enabled", [])
         disabled = plugins_section.get("disabled", [])
-        
+
         # Parse identity
         identity = data.get("identity", {})
-        
+
         # Parse polling
         polling = data.get("polling", {})
-        
+
         # Parse paths
         paths = data.get("paths", {})
-        
+
         # Parse exec
         exec_config = data.get("exec", {})
-        
+
         return cls(
             enabled_plugins=enabled,
             disabled_plugins=disabled,
@@ -112,7 +112,7 @@ class CobotConfig:
             exec_timeout=exec_config.get("timeout", 30),
             _raw=data,
         )
-    
+
     @classmethod
     def load(cls, path: Path) -> "CobotConfig":
         """Load config from YAML file."""
@@ -123,7 +123,7 @@ class CobotConfig:
 
 class ConfigPlugin(Plugin):
     """Configuration management plugin."""
-    
+
     meta = PluginMeta(
         id="config",
         version="1.0.0",
@@ -131,55 +131,55 @@ class ConfigPlugin(Plugin):
         dependencies=[],
         priority=1,  # Load first
     )
-    
+
     def __init__(self):
         self._config: Optional[CobotConfig] = None
         self._config_path: Optional[Path] = None
-    
+
     def configure(self, config: dict) -> None:
         """Config plugin configures itself by loading the config file."""
         # Find and load config file
         self._config = self._load_config_file()
-    
+
     def start(self) -> None:
         """Config is already loaded in configure()."""
         if self._config:
             print(f"[Config] Provider: {self._config.provider}", file=sys.stderr)
-    
+
     def stop(self) -> None:
         """Nothing to clean up."""
         pass
-    
+
     def _load_config_file(self) -> CobotConfig:
         """Load configuration from file(s)."""
         config = CobotConfig()
-        
+
         # Try home directory config
         home_config = Path.home() / ".cobot" / "cobot.yml"
         if home_config.exists():
             config = CobotConfig.load(home_config)
             self._config_path = home_config
-        
+
         # Try local cobot.yml (overrides home)
         local_config = Path("cobot.yml")
         if local_config.exists():
             config = CobotConfig.load(local_config)
             self._config_path = local_config
-        
+
         # Legacy: try config.yaml
         legacy_config = Path("config.yaml")
         if legacy_config.exists() and not local_config.exists():
             config = CobotConfig.load(legacy_config)
             self._config_path = legacy_config
-        
+
         return config
-    
+
     def get_config(self) -> CobotConfig:
         """Get the loaded configuration."""
         if self._config is None:
             self._config = self._load_config_file()
         return self._config
-    
+
     def get_plugin_config(self, plugin_id: str) -> dict:
         """Get config section for a specific plugin."""
         if self._config is None:
