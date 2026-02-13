@@ -39,10 +39,10 @@ all = [
 cobot = "cobot.cli:main"
 
 [project.urls]
-Homepage = "https://forgejo.tail593e12.ts.net/Zeus/cobot"
-Documentation = "https://forgejo.tail593e12.ts.net/Zeus/cobot#readme"
-Repository = "https://forgejo.tail593e12.ts.net/Zeus/cobot"
-Issues = "https://forgejo.tail593e12.ts.net/Zeus/cobot/issues"
+Homepage = "https://github.com/bridio/cobot"
+Documentation = "https://github.com/bridio/cobot#readme"
+Repository = "https://github.com/bridio/cobot"
+Issues = "https://github.com/bridio/cobot/issues"
 
 [build-system]
 requires = ["setuptools>=61.0"]
