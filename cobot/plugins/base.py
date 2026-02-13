@@ -155,6 +155,65 @@ class Plugin(ABC):
         """
         pass
 
+    # --- Setup Wizard Extension ---
+
+    def wizard_section(self) -> dict | None:
+        """Return wizard section info for this plugin.
+
+        If the plugin wants to participate in the setup wizard, return
+        a dict describing the section. Return None to skip.
+
+        Returns:
+            dict with keys:
+                - key: Config key (e.g., "telegram")
+                - name: Display name (e.g., "Telegram")
+                - description: Short description
+            or None to not participate in wizard
+
+        Example:
+            def wizard_section(self):
+                return {
+                    "key": "telegram",
+                    "name": "Telegram",
+                    "description": "Multi-group logging and archival"
+                }
+        """
+        return None
+
+    def wizard_configure(self, config: dict) -> dict:
+        """Interactive configuration for the setup wizard.
+
+        Called when user chooses to configure this plugin in the wizard.
+        Use click.prompt/confirm/echo for user interaction.
+
+        Args:
+            config: Configuration dict built so far (identity, provider, etc.)
+
+        Returns:
+            Configuration dict for this plugin's section
+
+        Example:
+            def wizard_configure(self, config: dict) -> dict:
+                import click
+
+                agent_name = config.get("identity", {}).get("name", "Agent")
+                click.echo(f"Setting up Telegram for {agent_name}")
+
+                token = click.prompt("Bot token", default="${TELEGRAM_BOT_TOKEN}")
+
+                groups = []
+                while click.confirm("Add a group?", default=len(groups) == 0):
+                    group_id = click.prompt("Group ID", type=int)
+                    group_name = click.prompt("Group name")
+                    groups.append({"id": group_id, "name": group_name})
+
+                return {
+                    "bot_token": token,
+                    "groups": groups,
+                }
+        """
+        return {}
+
 
 # List of all hook method names
 HOOK_METHODS = [

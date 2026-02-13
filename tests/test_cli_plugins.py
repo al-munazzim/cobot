@@ -238,6 +238,7 @@ class TestInitCommand:
             assert config["provider"] == "ppq"
             assert "identity" in config
             assert "ppq" in config
+            assert "exec" in config
 
     def test_init_does_not_overwrite_without_confirm(self, tmp_path):
         """Test that init doesn't overwrite without confirmation."""
@@ -258,6 +259,151 @@ class TestInitCommand:
             # Check original config preserved
             with open("cobot.yml") as f:
                 assert "existing" in f.read()
+
+
+class TestWizardExtensionPoints:
+    """Test wizard extension points for plugins."""
+
+    def test_plugin_has_wizard_section_method(self):
+        """Test that Plugin base class has wizard_section."""
+        assert hasattr(Plugin, "wizard_section")
+
+    def test_plugin_has_wizard_configure_method(self):
+        """Test that Plugin base class has wizard_configure."""
+        assert hasattr(Plugin, "wizard_configure")
+
+    def test_wizard_section_default_returns_none(self):
+        """Test that default wizard_section returns None."""
+
+        class TestPlugin(Plugin):
+            meta = PluginMeta(id="test", version="1.0.0")
+
+            def configure(self, config):
+                pass
+
+            def start(self):
+                pass
+
+            def stop(self):
+                pass
+
+        plugin = TestPlugin()
+        assert plugin.wizard_section() is None
+
+    def test_wizard_configure_default_returns_empty(self):
+        """Test that default wizard_configure returns empty dict."""
+
+        class TestPlugin(Plugin):
+            meta = PluginMeta(id="test", version="1.0.0")
+
+            def configure(self, config):
+                pass
+
+            def start(self):
+                pass
+
+            def stop(self):
+                pass
+
+        plugin = TestPlugin()
+        assert plugin.wizard_configure({}) == {}
+
+    def test_plugin_can_implement_wizard_section(self):
+        """Test that a plugin can implement wizard_section."""
+
+        class WizardPlugin(Plugin):
+            meta = PluginMeta(id="myplugin", version="1.0.0")
+
+            def configure(self, config):
+                pass
+
+            def start(self):
+                pass
+
+            def stop(self):
+                pass
+
+            def wizard_section(self):
+                return {
+                    "key": "myplugin",
+                    "name": "My Plugin",
+                    "description": "Does cool stuff",
+                }
+
+        plugin = WizardPlugin()
+        section = plugin.wizard_section()
+
+        assert section is not None
+        assert section["key"] == "myplugin"
+        assert section["name"] == "My Plugin"
+        assert section["description"] == "Does cool stuff"
+
+    def test_plugin_can_implement_wizard_configure(self):
+        """Test that a plugin can implement wizard_configure."""
+
+        class WizardPlugin(Plugin):
+            meta = PluginMeta(id="myplugin", version="1.0.0")
+
+            def configure(self, config):
+                pass
+
+            def start(self):
+                pass
+
+            def stop(self):
+                pass
+
+            def wizard_section(self):
+                return {"key": "myplugin", "name": "My Plugin"}
+
+            def wizard_configure(self, config):
+                # Can access existing config
+                agent_name = config.get("identity", {}).get("name", "Agent")
+                return {
+                    "agent_name": agent_name,
+                    "setting": "value",
+                }
+
+        plugin = WizardPlugin()
+        result = plugin.wizard_configure({"identity": {"name": "TestBot"}})
+
+        assert result["agent_name"] == "TestBot"
+        assert result["setting"] == "value"
+
+    def test_wizard_configure_receives_config(self):
+        """Test that wizard_configure receives the config built so far."""
+
+        received_config = {}
+
+        class InspectorPlugin(Plugin):
+            meta = PluginMeta(id="inspector", version="1.0.0")
+
+            def configure(self, config):
+                pass
+
+            def start(self):
+                pass
+
+            def stop(self):
+                pass
+
+            def wizard_configure(self, config):
+                nonlocal received_config
+                received_config = config.copy()
+                return {"inspected": True}
+
+        plugin = InspectorPlugin()
+        test_config = {
+            "identity": {"name": "MyAgent"},
+            "provider": "ppq",
+            "ppq": {"model": "gpt-4o"},
+        }
+
+        plugin.wizard_configure(test_config)
+
+        assert received_config["identity"]["name"] == "MyAgent"
+        assert received_config["provider"] == "ppq"
+        assert received_config["ppq"]["model"] == "gpt-4o"
 
 
 class TestPluginsCommand:

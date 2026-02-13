@@ -462,6 +462,7 @@ def init(non_interactive: bool):
     """Initialize cobot configuration.
 
     Interactive wizard to set up cobot.yml with plugins and credentials.
+    Plugins can extend the wizard via wizard_section() and wizard_configure().
     """
     import yaml
 
@@ -474,88 +475,114 @@ def init(non_interactive: bool):
 
     click.echo("\n🤖 Cobot Setup Wizard\n")
 
+    # --- Core Configuration (always present) ---
+
     config = {
         "provider": "ppq",
         "identity": {"name": "MyAgent"},
     }
 
     if non_interactive:
-        # Use defaults
+        # Use defaults for core config
         config["ppq"] = {
             "api_base": "https://api.ppq.ai/v1",
             "api_key": "${PPQ_API_KEY}",
             "model": "gpt-4o",
         }
+        config["exec"] = {"enabled": True, "timeout": 30}
     else:
-        # Interactive setup
+        # Interactive core setup
 
         # Identity
+        click.echo("📛 Identity\n")
         name = click.prompt("Agent name", default="MyAgent")
         config["identity"]["name"] = name
 
         # Provider
+        click.echo("\n🧠 LLM Provider\n")
         provider = click.prompt(
-            "LLM provider", type=click.Choice(["ppq", "ollama"]), default="ppq"
+            "Provider", type=click.Choice(["ppq", "ollama"]), default="ppq"
         )
         config["provider"] = provider
 
         if provider == "ppq":
-            click.echo("\n📡 PPQ Configuration (api.ppq.ai)")
+            click.echo("\n  PPQ Configuration (api.ppq.ai)")
             api_key = click.prompt(
-                "PPQ API key (or press enter to use env var)",
+                "  API key (or use env var)",
                 default="${PPQ_API_KEY}",
                 show_default=True,
             )
-            model = click.prompt("Model", default="gpt-4o")
+            model = click.prompt("  Model", default="gpt-4o")
             config["ppq"] = {
                 "api_base": "https://api.ppq.ai/v1",
                 "api_key": api_key,
                 "model": model,
             }
         else:
-            click.echo("\n🦙 Ollama Configuration (local)")
-            base_url = click.prompt("Ollama URL", default="http://localhost:11434")
-            model = click.prompt("Model", default="qwen2.5:7b")
+            click.echo("\n  Ollama Configuration (local)")
+            base_url = click.prompt("  URL", default="http://localhost:11434")
+            model = click.prompt("  Model", default="qwen2.5:7b")
             config["ollama"] = {
                 "base_url": base_url,
                 "model": model,
             }
 
-        # Communication plugins
-        click.echo("\n📬 Communication Plugins")
-
-        if click.confirm("Enable Nostr?", default=False):
-            config["nostr"] = {
-                "relays": [
-                    "wss://relay.damus.io",
-                    "wss://nos.lol",
-                ]
-            }
-
-        if click.confirm("Enable FileDrop?", default=True):
-            config["filedrop"] = {
-                "base_dir": "/tmp/filedrop",
-                "identity": name,
-            }
-
-        if click.confirm("Enable Telegram?", default=False):
-            token = click.prompt("Telegram bot token", default="${TELEGRAM_BOT_TOKEN}")
-            config["telegram"] = {
-                "bot_token": token,
-                "groups": [],
-                "media_dir": "./media",
-            }
-            click.echo("  (Add groups to cobot.yml after setup)")
-
         # Tool execution
-        click.echo("\n🔧 Tool Execution")
+        click.echo("\n🔧 Tool Execution\n")
         exec_enabled = click.confirm("Enable shell command execution?", default=True)
         config["exec"] = {
             "enabled": exec_enabled,
             "timeout": 30,
         }
 
-    # Write config
+    # --- Plugin Configuration (via extension points) ---
+
+    if not non_interactive:
+        try:
+            from cobot.plugins import get_registry
+
+            registry = get_registry()
+            if registry:
+                wizard_plugins = []
+
+                # Discover plugins that participate in wizard
+                for plugin in registry.all_plugins():
+                    try:
+                        section = plugin.wizard_section()
+                        if section:
+                            wizard_plugins.append((plugin, section))
+                    except Exception:
+                        pass
+
+                if wizard_plugins:
+                    click.echo("\n🔌 Plugins\n")
+
+                    for plugin, section in wizard_plugins:
+                        key = section.get("key", plugin.meta.id)
+                        name = section.get("name", plugin.meta.id)
+                        desc = section.get("description", "")
+
+                        prompt_text = f"Configure {name}?"
+                        if desc:
+                            prompt_text = f"Configure {name} ({desc})?"
+
+                        if click.confirm(prompt_text, default=False):
+                            try:
+                                plugin_config = plugin.wizard_configure(config)
+                                if plugin_config:
+                                    config[key] = plugin_config
+                                    click.echo(f"  ✓ {name} configured\n")
+                            except Exception as e:
+                                click.echo(
+                                    f"  ✗ Error configuring {name}: {e}\n", err=True
+                                )
+
+        except Exception:
+            # Plugins not available, skip plugin configuration
+            pass
+
+    # --- Write Configuration ---
+
     with open(config_path, "w") as f:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
