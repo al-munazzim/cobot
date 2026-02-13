@@ -14,12 +14,12 @@ from cobot.plugins import (
     init_plugins,
     run,
     LLMProvider,
-    CommunicationProvider,  # Legacy, kept for compatibility
+    CommunicationProvider,  # Legacy interface, kept for compatibility
     ToolProvider,
     LLMError,
     CommunicationError,
 )
-from cobot.plugins.session import OutgoingMessage
+from cobot.plugins.communication import OutgoingMessage
 
 
 class Cobot:
@@ -50,13 +50,9 @@ class Cobot:
         """Get LLM provider from registry."""
         return self.registry.get_by_capability("llm")
 
-    def _get_session(self):
-        """Get session plugin for channel communication."""
-        return self.registry.get("session")
-
-    def _get_communication(self) -> Optional[CommunicationProvider]:
-        """Get communication provider from registry (legacy)."""
-        return self.registry.get_by_capability("communication")
+    def _get_comm(self):
+        """Get communication plugin for channel messaging."""
+        return self.registry.get("communication")
 
     def _get_tools(self) -> Optional[ToolProvider]:
         """Get tools provider from registry."""
@@ -240,9 +236,9 @@ class Cobot:
             return
 
         # Show typing indicator
-        session = self._get_session()
-        if session:
-            session.typing(msg.channel_type, msg.channel_id)
+        comm = self._get_comm()
+        if comm:
+            comm.typing(msg.channel_type, msg.channel_id)
 
         message = ctx.get("message", msg.content)
         response_text = self.respond(message, sender=msg.sender_name)
@@ -253,9 +249,9 @@ class Cobot:
             return
         response_text = ctx.get("text", response_text)
 
-        # Send response via session
-        if session:
-            success = session.send(OutgoingMessage(
+        # Send response via communication plugin
+        if comm:
+            success = comm.send(OutgoingMessage(
                 channel_type=msg.channel_type,
                 channel_id=msg.channel_id,
                 content=response_text,
@@ -281,12 +277,12 @@ class Cobot:
 
     def poll(self) -> int:
         """Poll for new messages from all channels."""
-        session = self._get_session()
-        if not session:
+        comm = self._get_comm()
+        if not comm:
             return 0
 
         try:
-            messages = session.poll_all_channels()
+            messages = comm.poll()
             for msg in messages:
                 self.handle_message(msg)
             return len(messages)
@@ -296,9 +292,9 @@ class Cobot:
 
     def run_loop(self):
         """Run the main agent loop."""
-        session = self._get_session()
-        if session:
-            channels = session.get_channels()
+        comm = self._get_comm()
+        if comm:
+            channels = comm.get_channels()
             if channels:
                 print(f"Channels: {', '.join(channels)}", file=sys.stderr)
             else:

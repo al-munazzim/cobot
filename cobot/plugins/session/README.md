@@ -1,6 +1,6 @@
 # Session Plugin
 
-The session plugin is the **orchestrator** for all channel communication in cobot. It defines extension points that channel plugins implement, providing a unified interface for multi-channel messaging.
+The session plugin **implements** `communication.*` extension points and **defines** `session.*` extension points for channel plugins.
 
 ## Overview
 
@@ -9,11 +9,18 @@ The session plugin is the **orchestrator** for all channel communication in cobo
                     │  Agent  │
                     └────┬────┘
                          │
-            poll_all_channels() / send()
+                  comm.poll() / comm.send()
+                         │
+               ┌─────────▼─────────┐
+               │   Communication   │  ← defines extension points
+               │      Plugin       │
+               └─────────┬─────────┘
+                         │
+            implements communication.*
                          │
                     ┌────▼────┐
                     │ Session │  ← You are here
-                    │ Plugin  │
+                    │ Plugin  │     implements comm.*, defines session.*
                     └────┬────┘
                          │
          ┌───────────────┼───────────────┐
@@ -21,6 +28,7 @@ The session plugin is the **orchestrator** for all channel communication in cobo
     ┌────▼────┐    ┌────▼────┐    ┌────▼────┐
     │Telegram │    │ Discord │    │  Nostr  │
     └─────────┘    └─────────┘    └─────────┘
+         implements session.*
 ```
 
 Session doesn't know about specific channels. It discovers them via extension points.

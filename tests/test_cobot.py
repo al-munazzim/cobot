@@ -16,7 +16,7 @@ from cobot.plugins import (
     Message,
     CommunicationError,
 )
-from cobot.plugins.session import IncomingMessage, OutgoingMessage
+from cobot.plugins.communication import IncomingMessage, OutgoingMessage
 
 
 @pytest.fixture(autouse=True)
@@ -55,17 +55,17 @@ def mock_registry():
     tools_plugin.get_definitions.return_value = []
     tools_plugin.restart_requested = False
 
-    # Mock session plugin
-    session_plugin = Mock()
-    session_plugin.poll_all_channels.return_value = []
-    session_plugin.send.return_value = True
-    session_plugin.typing.return_value = None
-    session_plugin.get_channels.return_value = ["telegram"]
+    # Mock communication plugin
+    comm_plugin_new = Mock()
+    comm_plugin_new.poll.return_value = []
+    comm_plugin_new.send.return_value = True
+    comm_plugin_new.typing.return_value = None
+    comm_plugin_new.get_channels.return_value = ["telegram"]
 
     def get_plugin(name):
         plugins = {
             "config": config_plugin,
-            "session": session_plugin,
+            "communication": comm_plugin_new,
         }
         return plugins.get(name)
 
@@ -144,11 +144,11 @@ class TestCobot:
         assert "API failed" in response
 
 
-class TestSessionIntegration:
-    """Test session-based message handling."""
+class TestCommunicationIntegration:
+    """Test communication-based message handling."""
 
     def test_handle_message(self, mock_registry):
-        """Should respond to incoming message via session."""
+        """Should respond to incoming message via communication."""
         bot = Cobot(mock_registry)
 
         msg = IncomingMessage(
@@ -167,12 +167,12 @@ class TestSessionIntegration:
         mock_registry.get_by_capability("llm").chat.assert_called_once()
 
         # Should have shown typing indicator
-        session = mock_registry.get("session")
-        session.typing.assert_called_once_with("telegram", "-100123")
+        comm = mock_registry.get("communication")
+        comm.typing.assert_called_once_with("telegram", "-100123")
 
-        # Should have sent response via session
-        session.send.assert_called_once()
-        call_args = session.send.call_args
+        # Should have sent response via communication
+        comm.send.assert_called_once()
+        call_args = comm.send.call_args
         outgoing = call_args[0][0]
         assert isinstance(outgoing, OutgoingMessage)
         assert outgoing.channel_type == "telegram"
@@ -202,9 +202,9 @@ class TestSessionIntegration:
         assert mock_registry.get_by_capability("llm").chat.call_count == 1
 
     def test_poll_messages(self, mock_registry):
-        """Should poll and handle messages via session."""
-        session = mock_registry.get("session")
-        session.poll_all_channels.return_value = [
+        """Should poll and handle messages via communication."""
+        comm = mock_registry.get("communication")
+        comm.poll.return_value = [
             IncomingMessage(
                 id="e1", channel_type="telegram", channel_id="-100123",
                 sender_id="1", sender_name="alice", content="Hi",
@@ -225,16 +225,16 @@ class TestSessionIntegration:
 
     def test_poll_error(self, mock_registry):
         """Should handle poll errors gracefully."""
-        session = mock_registry.get("session")
-        session.poll_all_channels.side_effect = Exception("Connection failed")
+        comm = mock_registry.get("communication")
+        comm.poll.side_effect = Exception("Connection failed")
 
         bot = Cobot(mock_registry)
         count = bot.poll()
 
         assert count == 0  # No crash, returns 0
 
-    def test_poll_no_session(self, mock_registry):
-        """Should handle missing session plugin."""
+    def test_poll_no_communication(self, mock_registry):
+        """Should handle missing communication plugin."""
         mock_registry.get = Mock(return_value=None)
 
         bot = Cobot(mock_registry)

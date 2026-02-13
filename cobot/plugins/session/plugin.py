@@ -1,70 +1,44 @@
 """Session plugin - orchestrates channel communication.
 
-This plugin defines extension points that channel plugins implement,
-providing a unified interface for multi-channel messaging.
+This plugin implements communication.* extension points and defines
+session.* extension points for channel plugins to implement.
 
-Priority: 10 (early - before channels)
+Priority: 10 (after communication, before channels)
 """
 
 import sys
-from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Optional
 
 from ..base import Plugin, PluginMeta
-
-
-@dataclass
-class IncomingMessage:
-    """Normalized message from any channel."""
-
-    id: str  # Unique message ID
-    channel_type: str  # "telegram", "discord", etc.
-    channel_id: str  # Group/channel/room ID
-    sender_id: str  # User ID
-    sender_name: str  # Display name
-    content: str  # Message text
-    timestamp: datetime  # When sent
-    reply_to: Optional[str] = None  # ID of message being replied to
-    media: list = field(default_factory=list)  # Attachments
-    metadata: dict = field(default_factory=dict)  # Channel-specific data
-
-
-@dataclass
-class OutgoingMessage:
-    """Message to send to a channel."""
-
-    channel_type: str  # Target channel type
-    channel_id: str  # Target channel/group ID
-    content: str  # Message text
-    reply_to: Optional[str] = None  # Message to reply to
-    media: list = field(default_factory=list)  # Attachments
-    metadata: dict = field(default_factory=dict)  # Channel-specific options
+from ..communication import IncomingMessage, OutgoingMessage
 
 
 class SessionPlugin(Plugin):
     """Session orchestrator - routes messages between channels and agent.
 
-    Defines extension points:
-    - session.receive: Get new messages (poll or drain queue)
-    - session.send: Send a message to channel
-    - session.typing: Show typing indicator
-    - session.presence: Set online/offline status
+    Implements communication.* extension points (for agent to use).
+    Defines session.* extension points (for channels to implement).
     """
 
     meta = PluginMeta(
         id="session",
         version="1.0.0",
+        dependencies=["communication"],
+        # Implement communication extension points
+        implements={
+            "communication.receive": "poll_all_channels",
+            "communication.send": "send",
+            "communication.typing": "typing",
+            "communication.channels": "get_channels",
+        },
+        # Define session extension points for channels
         extension_points=[
             "session.receive",  # () -> list[IncomingMessage]
             "session.send",  # (OutgoingMessage) -> bool
             "session.typing",  # (channel_id: str) -> None
             "session.presence",  # (status: str) -> None
-            "session.edit",  # (channel_id, msg_id, content) -> bool
-            "session.delete",  # (channel_id, msg_id) -> bool
-            "session.react",  # (channel_id, msg_id, emoji) -> bool
         ],
-        priority=10,  # Early - before channels
+        priority=10,  # After communication (5), before channels (30)
     )
 
     def __init__(self):

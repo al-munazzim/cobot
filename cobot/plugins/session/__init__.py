@@ -1,11 +1,14 @@
 """Session plugin - channel communication orchestrator.
 
-This plugin defines extension points for channel plugins to implement,
-providing a unified interface for multi-channel messaging.
+This plugin implements communication.* extension points and defines
+session.* extension points for channel plugins to implement.
 
 See README.md for full documentation.
 """
 
-from .plugin import IncomingMessage, OutgoingMessage, SessionPlugin, create_plugin
+from .plugin import SessionPlugin, create_plugin
+
+# Re-export message types from communication for convenience
+from ..communication import IncomingMessage, OutgoingMessage
 
 __all__ = ["SessionPlugin", "IncomingMessage", "OutgoingMessage", "create_plugin"]
