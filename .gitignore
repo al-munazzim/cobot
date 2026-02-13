@@ -50,7 +50,7 @@ config.yaml
 secrets/
 
 # Memory/state (user data)
-memory/
+/memory/
 *.db
 *.sqlite
 
