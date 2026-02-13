@@ -1,9 +1,5 @@
 """Tests for plugin system (registry, base, interfaces)."""
 
-import tempfile
-from pathlib import Path
-from dataclasses import dataclass
-
 import pytest
 
 from cobot.plugins import (
@@ -17,16 +13,10 @@ from cobot.plugins import (
     LLMProvider,
     LLMResponse,
     LLMError,
-    CommunicationProvider,
     Message,
     CommunicationError,
-    ToolProvider,
-    ToolResult,
-    WalletProvider,
     WalletError,
-    init_plugins,
     run,
-    discover_plugins,
 )
 
 

@@ -7,10 +7,10 @@ Priority: 10 (after communication, before channels)
 """
 
 import sys
-from typing import Optional
 
 from ..base import Plugin, PluginMeta
 from ..communication import IncomingMessage, OutgoingMessage
+from ..registry import get_registry
 
 
 class SessionPlugin(Plugin):
@@ -42,7 +42,7 @@ class SessionPlugin(Plugin):
     )
 
     def __init__(self):
-        self._registry = None
+        self._registry = None  # Set in start() via get_registry()
         self._config = {}
         self._default_channel = None
 
@@ -53,6 +53,8 @@ class SessionPlugin(Plugin):
 
     def start(self) -> None:
         """Initialize session orchestrator."""
+        if self._registry is None:
+            self._registry = get_registry()
         print("[Session] Starting session orchestrator", file=sys.stderr)
         self._log_channels()
 

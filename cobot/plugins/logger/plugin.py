@@ -58,14 +58,14 @@ class LoggerPlugin(Plugin):
     def on_before_llm_call(self, ctx: dict) -> dict:
         model = ctx.get("model", "")
         messages = ctx.get("messages", [])
-        
+
         # Log message count and system prompt preview
         sys_prompt = ""
         for m in messages:
             if m.get("role") == "system":
                 sys_prompt = m.get("content", "")[:200]
                 break
-        
+
         self._log("debug", "llm_call", f"Calling {model} ({len(messages)} msgs)")
         if sys_prompt:
             self._log("debug", "llm_call", f"System: {sys_prompt}...")
@@ -80,7 +80,7 @@ class LoggerPlugin(Plugin):
     def on_before_tool_exec(self, ctx: dict) -> dict:
         tool = ctx.get("tool", "")
         args = ctx.get("args", {})
-        
+
         # Format args for readability
         if tool == "read_file":
             detail = args.get("path", "?")
@@ -98,23 +98,23 @@ class LoggerPlugin(Plugin):
         else:
             # Generic: show first arg value
             detail = str(list(args.values())[0])[:60] if args else ""
-        
+
         self._log("info", "tool", f"{tool}: {detail}")
         return ctx
 
     def on_after_tool_exec(self, ctx: dict) -> dict:
         tool = ctx.get("tool", "")
         result = ctx.get("result", "")
-        
+
         # Truncate long results
         if len(result) > 100:
             result_preview = result[:100] + f"... ({len(result)} chars)"
         else:
             result_preview = result
-        
+
         # Remove newlines for log readability
         result_preview = result_preview.replace("\n", "\\n")
-        
+
         self._log("info", "tool_done", f"{tool} → {result_preview}")
         return ctx
 

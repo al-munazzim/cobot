@@ -1,9 +1,7 @@
 """Tests for communication plugin."""
 
 from datetime import datetime
-from unittest.mock import Mock
 
-import pytest
 
 from .. import create_plugin, CommunicationPlugin, IncomingMessage, OutgoingMessage
 

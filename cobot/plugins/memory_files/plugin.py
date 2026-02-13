@@ -48,7 +48,7 @@ class MemoryFilesPlugin(Plugin):
                     self._files_dir = workspace.get_path("memory") / "files"
             except Exception:
                 pass
-        
+
         # Fallback to default workspace location
         if self._files_dir == Path("."):
             self._files_dir = Path.home() / ".cobot" / "workspace" / "memory" / "files"

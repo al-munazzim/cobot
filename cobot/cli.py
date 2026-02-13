@@ -16,8 +16,8 @@ import click
 
 def get_config_paths() -> tuple[Path, Path]:
     """Get home and local config paths."""
-    home_config = Path.home() / ".cobot" / "config.yaml"
-    local_config = Path("config.yaml")
+    home_config = Path.home() / ".cobot" / "cobot.yml"
+    local_config = Path("cobot.yml")
     return home_config, local_config
 
 
@@ -83,8 +83,20 @@ def cli():
 @click.option("--stdin", is_flag=True, help="Run in stdin mode (no Nostr)")
 @click.option("--plugins", "-p", type=click.Path(exists=True), help="Plugins directory")
 @click.option("--debug", "-d", is_flag=True, help="Enable debug logging")
-@click.option("--continue", "-C", "continue_session", is_flag=True, help="Continue previous conversation")
-def run(config: Optional[str], stdin: bool, plugins: Optional[str], debug: bool, continue_session: bool):
+@click.option(
+    "--continue",
+    "-C",
+    "continue_session",
+    is_flag=True,
+    help="Continue previous conversation",
+)
+def run(
+    config: Optional[str],
+    stdin: bool,
+    plugins: Optional[str],
+    debug: bool,
+    continue_session: bool,
+):
     """Start the cobot agent."""
     # Check if already running
     existing_pid = read_pid()
@@ -102,11 +114,12 @@ def run(config: Optional[str], stdin: bool, plugins: Optional[str], debug: bool,
         import yaml
 
         # Load config file first (for plugin filtering)
-        config_path = Path(config) if config else Path("cobot.yml")
+        config_path = Path(config) if config else _find_config_path()
         raw_config = {}
         if config_path.exists():
             with open(config_path) as f:
                 raw_config = yaml.safe_load(f) or {}
+            print(f"[Config] Loaded from {config_path}", file=sys.stderr)
 
         # Override logger level if --debug flag
         if debug:
@@ -365,46 +378,205 @@ def config():
     pass
 
 
+def _mask_secrets(data: dict, parent_key: str = "") -> dict:
+    """Mask sensitive values in config dict."""
+    secret_keys = {"api_key", "secret", "password", "token", "private_key"}
+    result = {}
+    for k, v in data.items():
+        if isinstance(v, dict):
+            result[k] = _mask_secrets(v, k)
+        elif k in secret_keys and isinstance(v, str) and len(v) > 4:
+            result[k] = f"***{v[-4:]}"
+        else:
+            result[k] = v
+    return result
+
+
 @config.command("show")
-def config_show():
-    """Show current configuration."""
+@click.option("--reveal", is_flag=True, help="Show secrets unmasked")
+def config_show(reveal: bool):
+    """Show current configuration.
+
+    Keys shown can be used with 'config get/set' commands.
+    Secrets are masked by default (use --reveal to show).
+    """
+    import yaml
+
     cfg = load_merged_config()
 
-    click.echo("Identity:")
-    click.echo(f"  name: {cfg.identity_name}")
-    click.echo("\nPolling:")
-    click.echo(f"  interval: {cfg.polling_interval}s")
-    click.echo("\nProvider:")
-    click.echo(f"  provider: {cfg.provider}")
-    click.echo("\nPaths:")
-    click.echo(f"  skills: {cfg.skills_path}")
-    click.echo(f"  plugins: {cfg.plugins_path}")
-    click.echo(f"  memory: {cfg.memory_path}")
-    click.echo("\nExec:")
-    click.echo(f"  enabled: {cfg.exec_enabled}")
+    # Get raw config and mask secrets
+    data = cfg._raw.copy() if cfg._raw else {}
+
+    if not reveal:
+        data = _mask_secrets(data)
+
+    if data:
+        click.echo(yaml.dump(data, default_flow_style=False, sort_keys=False))
+    else:
+        click.echo("# No configuration loaded")
+        click.echo("# Create ~/.cobot/cobot.yml or ./cobot.yml")
+
+    click.echo("# Use 'cobot config get <key>' or 'cobot config set <key> <value>'")
 
 
 @config.command("edit")
-def config_edit():
-    """Edit local config in $EDITOR."""
-    editor = os.environ.get("EDITOR", "nano")
-    config_path = Path("config.yaml")
+@click.option(
+    "--config",
+    "-c",
+    "config_path",
+    type=click.Path(),
+    help="Config file to edit",
+)
+def config_edit(config_path: Optional[str]):
+    """Edit config in $EDITOR."""
+    editor = os.environ.get("EDITOR", "vi")
+    path = _find_config_path(config_path)
 
-    if not config_path.exists():
+    if not path.exists():
+        # Create parent directory if needed
+        path.parent.mkdir(parents=True, exist_ok=True)
         # Create default config
-        config_path.write_text("""# Cobot Configuration
+        path.write_text("""# Cobot Configuration
+provider: ppq
 
 identity:
-  name: "Cobot"
+  name: "MyAgent"
 
-polling:
-  interval_seconds: 30
+ppq:
+  # api_key: "your-key-here"  # or set PPQ_API_KEY env var
+  model: "openai/gpt-4o"
 
-inference:
-  model: "gpt-5-nano"
+exec:
+  enabled: true
+  timeout: 30
 """)
+        click.echo(f"Created new config at {path}", err=True)
 
-    subprocess.run([editor, str(config_path)])
+    subprocess.run([editor, str(path)])
+
+
+def _find_config_path(explicit_path: Optional[str] = None) -> Path:
+    """Find config file path (same logic as config loading)."""
+    if explicit_path:
+        return Path(explicit_path)
+
+    # Check local first, then home
+    local_config = Path("cobot.yml")
+    if local_config.exists():
+        return local_config
+
+    home_config = Path.home() / ".cobot" / "cobot.yml"
+    if home_config.exists():
+        return home_config
+
+    # Default to home config for new files
+    return home_config
+
+
+@config.command("set")
+@click.argument("key")
+@click.argument("value")
+@click.option(
+    "--config",
+    "-c",
+    "config_path",
+    type=click.Path(),
+    help="Config file (default: ~/.cobot/cobot.yml or ./cobot.yml)",
+)
+def config_set(key: str, value: str, config_path: Optional[str]):
+    """Set a configuration value.
+
+    KEY uses dot notation for nested values (e.g., ppq.model, exec.timeout).
+
+    Examples:
+        cobot config set ppq.model openai/gpt-4o-mini
+        cobot config set exec.timeout 60
+        cobot config set identity.name MyBot
+    """
+    import yaml
+
+    path = _find_config_path(config_path)
+
+    # Load existing config or start fresh
+    if path.exists():
+        with open(path) as f:
+            cfg = yaml.safe_load(f) or {}
+    else:
+        cfg = {}
+
+    # Parse value (try to interpret as int, float, bool, or keep as string)
+    parsed_value: any = value
+    if value.lower() == "true":
+        parsed_value = True
+    elif value.lower() == "false":
+        parsed_value = False
+    elif value.isdigit():
+        parsed_value = int(value)
+    else:
+        try:
+            parsed_value = float(value)
+        except ValueError:
+            parsed_value = value  # Keep as string
+
+    # Navigate to nested key and set value
+    keys = key.split(".")
+    current = cfg
+    for k in keys[:-1]:
+        if k not in current:
+            current[k] = {}
+        elif not isinstance(current[k], dict):
+            click.echo(f"Error: {k} is not a section, cannot set nested key", err=True)
+            sys.exit(1)
+        current = current[k]
+
+    old_value = current.get(keys[-1])
+    current[keys[-1]] = parsed_value
+
+    # Write back
+    with open(path, "w") as f:
+        yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
+
+    if old_value is not None:
+        click.echo(f"Updated {key}: {old_value} → {parsed_value}")
+    else:
+        click.echo(f"Set {key} = {parsed_value}")
+
+
+@config.command("get")
+@click.argument("key")
+@click.option(
+    "--config",
+    "-c",
+    "config_path",
+    type=click.Path(),
+    help="Config file (default: ~/.cobot/cobot.yml or ./cobot.yml)",
+)
+def config_get(key: str, config_path: Optional[str]):
+    """Get a configuration value.
+
+    KEY uses dot notation for nested values (e.g., ppq.model, exec.timeout).
+    """
+    import yaml
+
+    path = _find_config_path(config_path)
+
+    if not path.exists():
+        click.echo(f"Config file not found: {path}", err=True)
+        sys.exit(1)
+
+    with open(path) as f:
+        cfg = yaml.safe_load(f) or {}
+
+    # Navigate to nested key
+    keys = key.split(".")
+    current = cfg
+    for k in keys:
+        if not isinstance(current, dict) or k not in current:
+            click.echo(f"Key not found: {key}", err=True)
+            sys.exit(1)
+        current = current[k]
+
+    click.echo(current)
 
 
 @config.command("validate")
@@ -489,7 +661,13 @@ def wizard():
 @click.option(
     "--non-interactive", "-y", is_flag=True, help="Use defaults, don't prompt"
 )
-def init(non_interactive: bool):
+@click.option(
+    "--home", is_flag=True, help="Create config in ~/.cobot/ instead of current dir"
+)
+@click.option(
+    "--config", "-c", "config_path_opt", type=click.Path(), help="Config file path"
+)
+def init(non_interactive: bool, home: bool, config_path_opt: Optional[str]):
     """Initialize cobot configuration.
 
     Interactive wizard to set up cobot.yml with plugins and credentials.
@@ -497,10 +675,15 @@ def init(non_interactive: bool):
     """
     import yaml
 
-    config_path = Path("cobot.yml")
+    if config_path_opt:
+        config_path = Path(config_path_opt)
+    elif home:
+        config_path = Path.home() / ".cobot" / "cobot.yml"
+    else:
+        config_path = Path("cobot.yml")
 
     if config_path.exists() and not non_interactive:
-        if not click.confirm("cobot.yml already exists. Overwrite?"):
+        if not click.confirm(f"{config_path} already exists. Overwrite?"):
             click.echo("Aborted.")
             return
 
@@ -616,12 +799,15 @@ def init(non_interactive: bool):
 
     # --- Write Configuration ---
 
+    # Create parent directory if needed
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
     with open(config_path, "w") as f:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
     click.echo(f"\n✅ Configuration written to {config_path}")
     click.echo("\nNext steps:")
-    click.echo("  1. Review and edit cobot.yml")
+    click.echo(f"  1. Review and edit {config_path}")
     click.echo("  2. Set environment variables (PPQ_API_KEY, etc.)")
     click.echo("  3. Run: cobot run")
 

@@ -14,10 +14,8 @@ from cobot.plugins import (
     init_plugins,
     run,
     LLMProvider,
-    CommunicationProvider,  # Legacy interface, kept for compatibility
     ToolProvider,
     LLMError,
-    CommunicationError,
 )
 from cobot.plugins.communication import OutgoingMessage
 
@@ -244,19 +242,23 @@ class Cobot:
         response_text = self.respond(message, sender=msg.sender_name)
 
         # Hook: on_before_send
-        ctx = run("on_before_send", {"text": response_text, "recipient": msg.sender_name})
+        ctx = run(
+            "on_before_send", {"text": response_text, "recipient": msg.sender_name}
+        )
         if ctx.get("abort"):
             return
         response_text = ctx.get("text", response_text)
 
         # Send response via communication plugin
         if comm:
-            success = comm.send(OutgoingMessage(
-                channel_type=msg.channel_type,
-                channel_id=msg.channel_id,
-                content=response_text,
-                reply_to=msg.id,
-            ))
+            success = comm.send(
+                OutgoingMessage(
+                    channel_type=msg.channel_type,
+                    channel_id=msg.channel_id,
+                    content=response_text,
+                    reply_to=msg.id,
+                )
+            )
             if success:
                 run(
                     "on_after_send",

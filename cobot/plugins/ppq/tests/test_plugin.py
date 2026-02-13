@@ -1,7 +1,7 @@
 """Tests for PPQ LLM plugin."""
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 from ..plugin import PPQPlugin, InsufficientFundsError, create_plugin
 from ...interfaces import LLMResponse, LLMError

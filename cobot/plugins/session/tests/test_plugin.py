@@ -1,9 +1,7 @@
 """Tests for session plugin."""
 
 from datetime import datetime
-from unittest.mock import Mock
 
-import pytest
 
 from .. import create_plugin, SessionPlugin
 from ...communication import IncomingMessage, OutgoingMessage

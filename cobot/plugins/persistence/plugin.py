@@ -37,19 +37,26 @@ class PersistencePlugin(Plugin):
 
     def start(self) -> None:
         if not self._enabled:
-            print("[Persistence] Disabled (use --continue to load history)", file=sys.stderr)
+            print(
+                "[Persistence] Disabled (use --continue to load history)",
+                file=sys.stderr,
+            )
             return
-        
+
         # Get workspace path from workspace plugin
         if self._registry:
             workspace = self._registry.get("workspace")
             if workspace:
                 self._memory_dir = workspace.get_path("memory") / "conversations"
             else:
-                self._memory_dir = Path.home() / ".cobot" / "workspace" / "memory" / "conversations"
+                self._memory_dir = (
+                    Path.home() / ".cobot" / "workspace" / "memory" / "conversations"
+                )
         else:
-            self._memory_dir = Path.home() / ".cobot" / "workspace" / "memory" / "conversations"
-        
+            self._memory_dir = (
+                Path.home() / ".cobot" / "workspace" / "memory" / "conversations"
+            )
+
         self._memory_dir.mkdir(parents=True, exist_ok=True)
         print(f"[Persistence] Memory dir: {self._memory_dir}", file=sys.stderr)
 
@@ -100,7 +107,7 @@ class PersistencePlugin(Plugin):
     def on_message_received(self, ctx: dict) -> dict:
         if not self._enabled:
             return ctx
-            
+
         sender = ctx.get("sender", "")
         message = ctx.get("message", "")
 
@@ -113,7 +120,7 @@ class PersistencePlugin(Plugin):
     def transform_history(self, ctx: dict) -> dict:
         if not self._enabled:
             return ctx
-            
+
         peer = ctx.get("peer", self._current_peer)
         messages = ctx.get("messages", [])
 
@@ -141,7 +148,7 @@ class PersistencePlugin(Plugin):
     def on_after_send(self, ctx: dict) -> dict:
         if not self._enabled:
             return ctx
-            
+
         recipient = ctx.get("recipient", self._current_peer)
         text = ctx.get("text", "")
 
