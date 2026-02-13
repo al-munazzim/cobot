@@ -38,16 +38,20 @@ class MemoryFilesPlugin(Plugin):
             self._files_dir = self._workspace_path / "memory" / "files"
 
     def start(self) -> None:
-        """Initialize files directory."""
-        # Try to get workspace from registry if available
+        """Initialize files directory using workspace."""
+        # Get workspace from registry
         if self._registry:
             try:
-                workspace = self._registry.get_plugin("workspace")
+                workspace = self._registry.get("workspace")
                 if workspace:
                     self._workspace_path = workspace.get_path()
-                    self._files_dir = workspace.get_path("memory", "files")
+                    self._files_dir = workspace.get_path("memory") / "files"
             except Exception:
                 pass
+        
+        # Fallback to default workspace location
+        if self._files_dir == Path("."):
+            self._files_dir = Path.home() / ".cobot" / "workspace" / "memory" / "files"
 
         # Ensure directory exists
         self._files_dir.mkdir(parents=True, exist_ok=True)
