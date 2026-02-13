@@ -2,6 +2,22 @@
 
 File-based communication fallback.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [How It Works](#how-it-works)
+- [Configuration](#configuration)
+- [Message Format](#message-format)
+- [Usage](#usage)
+- [Use Cases](#use-cases)
+- [Permissions](#permissions)
+- [Comparison with Nostr](#comparison-with-nostr)
+
 ## Overview
 
 When network-based communication (Nostr) is unreliable, FileDrop provides a simple alternative using files in a shared directory. Great for local multi-agent setups.

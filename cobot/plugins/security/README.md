@@ -2,6 +2,24 @@
 
 Blocks prompt injection attacks.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [How It Works](#how-it-works)
+- [Detection Methods](#detection-methods)
+  - [Pattern-Based](#pattern-based)
+  - [LLM-Based (Optional)](#llm-based-optional)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Custom Shield Script](#custom-shield-script)
+- [Response to Blocked Messages](#response-to-blocked-messages)
+- [Logging](#logging)
+
 ## Overview
 
 The security plugin scans incoming messages for prompt injection attempts and blocks malicious content before it reaches the LLM.

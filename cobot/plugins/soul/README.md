@@ -2,6 +2,22 @@
 
 Reads `SOUL.md` from workspace to define agent persona.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [SOUL.md Format](#soulmd-format)
+- [Personality](#personality)
+- [Guidelines](#guidelines)
+- [Tone](#tone)
+- [Usage](#usage)
+- [How It Works](#how-it-works)
+- [Integration with Context](#integration-with-context)
+
 ## Overview
 
 The soul plugin provides the agent's personality and tone by reading a `SOUL.md` file from the workspace. This content is injected into the system prompt.

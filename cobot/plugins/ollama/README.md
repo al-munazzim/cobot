@@ -2,6 +2,22 @@
 
 Local LLM inference via [Ollama](https://ollama.ai).
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [Prerequisites](#prerequisites)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Response Format](#response-format)
+- [Supported Models](#supported-models)
+- [Tool Support](#tool-support)
+- [Comparison with PPQ](#comparison-with-ppq)
+
 ## Overview
 
 Provides LLM capabilities using locally-running Ollama. No API keys needed, runs entirely on your hardware.

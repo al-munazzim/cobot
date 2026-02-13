@@ -2,6 +2,19 @@
 
 Defines extension points for memory storage and retrieval.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [Architecture](#architecture)
+- [Usage](#usage)
+- [CLI Commands](#cli-commands)
+- [Implementing Memory Backend](#implementing-memory-backend)
+
 ## Overview
 
 The memory plugin is an **extension point definer**. It defines the interface for memory operations (store, retrieve, search) that different backends can implement (files, vector DB, etc.).

@@ -2,6 +2,23 @@
 
 Communication via the [Nostr](https://nostr.com) protocol.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Environment Variables](#environment-variables)
+- [Usage](#usage)
+- [Message Format](#message-format)
+- [Default Relays](#default-relays)
+- [Identity Generation](#identity-generation)
+- [Security](#security)
+
 ## Overview
 
 Provides peer-to-peer communication using Nostr encrypted direct messages. Your agent gets a persistent identity (npub) that works across relays.

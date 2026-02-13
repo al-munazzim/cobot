@@ -2,6 +2,28 @@
 
 The session plugin **implements** `communication.*` extension points and **defines** `session.*` extension points for channel plugins.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Extension Points](#extension-points)
+- [Message Types](#message-types)
+  - [IncomingMessage](#incomingmessage)
+  - [OutgoingMessage](#outgoingmessage)
+- [API](#api)
+  - [poll_all_channels()](#pollallchannels)
+  - [send(message)](#sendmessage)
+  - [typing(channel_type, channel_id)](#typingchanneltype-channelid)
+  - [broadcast(content, exclude_channel=None)](#broadcastcontent-excludechannelnone)
+- [Implementing a Channel](#implementing-a-channel)
+- [Polling vs Push Channels](#polling-vs-push-channels)
+  - [Polling Channel](#polling-channel)
+  - [Push Channel](#push-channel)
+- [Agent Integration](#agent-integration)
+- [Configuration](#configuration)
+- [Priority](#priority)
+- [Why This Design?](#why-this-design)
+
 ## Overview
 
 ```

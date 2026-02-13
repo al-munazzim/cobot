@@ -2,6 +2,19 @@
 
 Builds system prompts by aggregating from extension point implementers.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [How It Works](#how-it-works)
+- [Usage](#usage)
+- [Implementing context.system_prompt](#implementing-contextsystemprompt)
+- [Implementing context.history](#implementing-contexthistory)
+
 ## Overview
 
 The context plugin defines extension points for building the agent's context (system prompt, conversation history). Other plugins implement these points to contribute their parts.

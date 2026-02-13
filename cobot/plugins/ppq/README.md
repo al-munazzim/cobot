@@ -2,6 +2,21 @@
 
 LLM inference via [ppq.ai](https://ppq.ai).
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [Configuration](#configuration)
+- [Environment Variables](#environment-variables)
+- [Usage](#usage)
+- [Response Format](#response-format)
+- [Errors](#errors)
+- [Supported Models](#supported-models)
+
 ## Overview
 
 Provides LLM capabilities using PPQ.ai's API. Pay-per-query with Bitcoin Lightning, no subscriptions.

@@ -2,6 +2,20 @@
 
 File-based implementation of memory extension points.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [Storage Structure](#storage-structure)
+- [Usage](#usage)
+- [Search Results Format](#search-results-format)
+- [Limitations](#limitations)
+- [Future: memory-vector](#future-memory-vector)
+
 ## Overview
 
 Implements memory operations using markdown files in `workspace/memory/files/`. Simple, human-readable storage without external dependencies.

@@ -2,6 +2,21 @@
 
 Logs lifecycle events.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [Log Levels](#log-levels)
+- [Configuration](#configuration)
+- [Output Format](#output-format)
+- [Hooks](#hooks)
+- [Usage](#usage)
+- [JSON Logging](#json-logging)
+
 ## Overview
 
 Simple logging plugin that outputs lifecycle events to stderr. Useful for debugging and monitoring.

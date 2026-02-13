@@ -2,6 +2,22 @@
 
 Lightning wallet via [npub.cash](https://npub.cash).
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [Configuration](#configuration)
+- [Prerequisites](#prerequisites)
+- [Usage](#usage)
+- [Tool Integration](#tool-integration)
+- [Example Conversation](#example-conversation)
+- [npub.cash Scripts](#npubcash-scripts)
+- [Error Handling](#error-handling)
+
 ## Overview
 
 Provides Bitcoin Lightning Network capabilities using npub.cash's Cashu wallet. The agent can check balance, send payments, and receive sats.

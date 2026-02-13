@@ -2,6 +2,20 @@
 
 Provides tool execution for the agent.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [Available Tools](#available-tools)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Tool Definitions Format](#tool-definitions-format)
+- [Security](#security)
+
 ## Overview
 
 The tools plugin exposes capabilities to the LLM as function calls. It handles file operations, command execution, and integrates with other plugins (wallet).

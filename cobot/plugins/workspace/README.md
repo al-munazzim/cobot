@@ -2,6 +2,20 @@
 
 Provides workspace directory paths for all plugins.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [Workspace Structure](#workspace-structure)
+- [Path Resolution Priority](#path-resolution-priority)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Auto-Creation](#auto-creation)
+
 ## Overview
 
 The workspace plugin manages the agent's working directory structure. Other plugins use it to store memory, logs, skills, and other data.

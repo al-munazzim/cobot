@@ -2,6 +2,22 @@
 
 Summarizes old conversation history to stay within token limits.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [How It Works](#how-it-works)
+- [Token Budget](#token-budget)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Summary Format](#summary-format)
+- [Hooks](#hooks)
+- [Preserving Important Info](#preserving-important-info)
+
 ## Overview
 
 When conversation history gets too long, the compaction plugin summarizes older messages to free up context window space while preserving important information.

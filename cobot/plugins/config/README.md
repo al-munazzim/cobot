@@ -2,6 +2,19 @@
 
 Loads and provides configuration from `cobot.yml`.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [Features](#features)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Environment Variables](#environment-variables)
+
 ## Overview
 
 The config plugin is loaded first (priority 1) and provides configuration to all other plugins. It reads YAML configuration files and expands environment variables.

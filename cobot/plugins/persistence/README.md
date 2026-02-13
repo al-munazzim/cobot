@@ -2,6 +2,20 @@
 
 Saves conversation history per peer.
 
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Priority](#priority)
+- [Capabilities](#capabilities)
+- [Dependencies](#dependencies)
+- [Extension Points](#extension-points)
+- [Storage Format](#storage-format)
+- [Usage](#usage)
+- [Integration with Agent](#integration-with-agent)
+- [Hooks](#hooks)
+- [Configuration](#configuration)
+
 ## Overview
 
 The persistence plugin stores conversation history so the agent remembers previous interactions. History is saved per-peer (each person the agent talks to has their own history).
