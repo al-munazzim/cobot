@@ -193,7 +193,10 @@ class Cobot:
                 },
             )
 
-            return ctx.get("text", response.content or "")
+            final_text = ctx.get("text", response.content or "")
+            if not final_text.strip():
+                final_text = "(No response generated - model may have hit token limit)"
+            return final_text
 
         except LLMError as e:
             run("on_error", {"error": e, "hook": "llm_call"})
