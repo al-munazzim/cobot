@@ -6,6 +6,7 @@ Get Cobot running in 5 minutes.
 
 - Python 3.11 or higher
 - An LLM API key (PPQ, OpenRouter, or local Ollama)
+- A Telegram bot token (optional, from [@BotFather](https://t.me/BotFather))
 
 ## Step 1: Install
 
@@ -19,182 +20,110 @@ python -m venv .venv
 source .venv/bin/activate  # Linux/macOS
 # .venv\Scripts\activate   # Windows
 
-# Install
-pip install -e .
+# Install with Telegram support
+pip install -e ".[telegram]"
 ```
 
-## Step 2: Configure
+## Step 2: Configure with Wizard
+
+Run the setup wizard:
 
 ```bash
-# Copy example config
-cp cobot.yml.example cobot.yml
+cobot wizard init
 ```
 
-Edit `cobot.yml`:
+The wizard will guide you through configuration. Paste your secrets directly:
 
-```yaml
-provider: ppq
+```
+🤖 Identity
 
-identity:
-  name: "MyCobot"
+Agent name [Cobot]: MyBot
 
-ppq:
-  api_key: "${PPQ_API_KEY}"
-  model: "gpt-4o"
+🔌 LLM Provider
 
-exec:
-  enabled: true
-  timeout: 30
+Use PPQ (recommended)? [Y/n]: y
+PPQ API key [${PPQ_API_KEY}]: sk-your-actual-api-key-here
+Model [openai/gpt-4o]: 
+
+🔧 Tool Execution
+
+Enable shell command execution? [Y/n]: y
+
+🔌 Plugins
+
+Configure Telegram (Connect to Telegram for messaging)? [y/N]: y
+
+Setting up Telegram for MyBot
+Bot token (or env var) [${TELEGRAM_BOT_TOKEN}]: 123456789:ABCdefGHI-your-token
+Long poll timeout (seconds) [30]: 
+  ✓ Telegram configured
+
+Configure User Authorization (Control who can interact with the bot)? [y/N]: y
+Enable pairing? [Y/n]: y
+Add Telegram owner ID? [Y/n]: y
+Your Telegram user ID: 769134210
+  ✓ User Authorization configured
+
+✅ Configuration saved to cobot.yml
 ```
 
-Set your API key:
+## Step 3: Run
+
+Start cobot:
 
 ```bash
-export PPQ_API_KEY="your-api-key-here"
-```
-
-## Step 3: Set Up User Authorization (Optional)
-
-If you're exposing your bot on Telegram or other channels, configure pairing to control who can interact:
-
-```yaml
-# In cobot.yml
-pairing:
-  enabled: true
-  owner_ids:
-    telegram: ["your-telegram-user-id"]
-  # skip_channels: ["nostr"]  # Optional: skip auth for specific channels
-```
-
-Unknown users will receive a pairing code. Approve them with:
-
-```bash
-cobot pairing approve <code>
-```
-
-See all pending/approved users:
-
-```bash
-cobot pairing list
-```
-
-## Step 4: Run
-
-```bash
-# Interactive mode (recommended for first run)
-cobot run --stdin
+cobot run
 ```
 
 You should see:
 
 ```
 [Config] Provider: ppq
-[Registry] Started 'config'
-[Registry] Started 'ppq'
-[Registry] Started 'tools'
-Loaded plugins
-Identity: MyCobot
-
-> 
+[telegram] Configured with 0 groups
+[pairing] Ready (1 authorized, 0 pending)
+Loaded 19 plugin(s)
+Channels: telegram
 ```
 
-Try sending a message:
+Now message your bot on Telegram — it will respond!
 
-```
-> Hello! What can you do?
-```
-
-## Step 5: Explore
-
-### Check Status
+For interactive terminal mode (no Telegram, just stdin/stdout):
 
 ```bash
-cobot status
+cobot run --stdin
 ```
 
-### Run as Daemon
+## Step 4: Manage Users
+
+When someone new messages your bot, they get a pairing code:
+
+```
+Access not configured.
+Your Telegram user id: 123456789
+Pairing code: ABCD1234
+
+Ask the bot owner to approve with:
+  cobot pairing approve ABCD1234
+```
+
+Approve them (in another terminal):
 
 ```bash
-# Start in background
-cobot run &
-
-# Or use the PID file
-cobot status  # Shows PID if running
-cobot restart # Restart running instance
+cobot pairing approve ABCD1234
+cobot pairing list              # See all users
+cobot pairing revoke telegram 123456789  # Remove access
 ```
 
-### Add Plugins
-
-Create a plugin directory:
+## Useful Commands
 
 ```bash
-mkdir -p plugins/hello
+cobot status              # Check if running
+cobot config show         # View config (secrets masked)
+cobot config set key val  # Update config
+cobot wizard plugins      # List available plugins
 ```
-
-Create `plugins/hello/plugin.py`:
-
-```python
-from cobot.plugins.base import Plugin, PluginMeta
-
-class HelloPlugin(Plugin):
-    meta = PluginMeta(
-        id="hello",
-        version="1.0.0",
-        capabilities=[],
-        dependencies=[],
-        priority=50,
-    )
-    
-    def configure(self, config: dict) -> None:
-        pass
-    
-    def start(self) -> None:
-        print("[Hello] World!")
-    
-    def stop(self) -> None:
-        pass
-
-def create_plugin():
-    return HelloPlugin()
-```
-
-Restart Cobot — your plugin will be loaded automatically.
 
 ## Next Steps
 
-1. **Add Nostr identity** — See [Nostr Setup](nostr.md)
-2. **Add Lightning wallet** — See [Wallet Setup](wallet.md)
-3. **Create custom plugins** — See [Plugin Development](../CONTRIBUTING.md#plugin-development)
-4. **Understand architecture** — See [Architecture](architecture.md)
-
-## Common Issues
-
-### "No LLM configured"
-
-Make sure your API key is set:
-
-```bash
-echo $PPQ_API_KEY  # Should show your key
-```
-
-### Plugin not loading
-
-Check the plugin path:
-
-```bash
-ls -la plugins/  # Should show your plugin directory
-```
-
-### Permission denied
-
-Check file permissions:
-
-```bash
-chmod +x cobot/cli.py
-```
-
-## Getting Help
-
-- [GitHub Issues](https://github.com/ultanio/cobot/issues)
-- [Architecture Docs](architecture.md)
-- [Contributing Guide](../CONTRIBUTING.md)
+- [Architecture](architecture.md) — Understand how plugins work
+- [Plugin Development](../CONTRIBUTING.md#plugin-development) — Create custom plugins

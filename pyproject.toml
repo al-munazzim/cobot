@@ -23,6 +23,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+telegram = [
+    "python-telegram-bot>=21.0",
+]
 nostr = [
     "pynostr>=0.6",
 ]
@@ -32,7 +35,7 @@ dev = [
     "ruff>=0.2",
 ]
 all = [
-    "cobot[nostr,dev]",
+    "cobot[telegram,nostr,dev]",
 ]
 
 [project.scripts]
@@ -59,5 +62,6 @@ python_functions = "test_*"
 
 [tool.ruff]
 exclude = [
-    "cobot/plugins/nostr/tests/",  # pynostr is optional dependency
+    "cobot/plugins/nostr/tests/",     # pynostr is optional dependency
+    "cobot/plugins/telegram/tests/",  # python-telegram-bot is optional
 ]

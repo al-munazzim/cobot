@@ -773,15 +773,22 @@ def init(non_interactive: bool, home: bool, config_path_opt: Optional[str]):
 
     if not non_interactive:
         try:
-            from cobot.plugins import get_registry
+            from cobot.plugins import discover_plugins
 
-            registry = get_registry()
-            if registry:
+            # Find plugins directory
+            plugins_dir = None
+            for candidate in [Path("cobot/plugins"), Path(__file__).parent / "plugins"]:
+                if candidate.exists():
+                    plugins_dir = candidate
+                    break
+
+            if plugins_dir:
                 wizard_plugins = []
 
                 # Discover plugins that participate in wizard
-                for plugin in registry.all_plugins():
+                for plugin_class in discover_plugins(plugins_dir):
                     try:
+                        plugin = plugin_class()
                         section = plugin.wizard_section()
                         if section:
                             wizard_plugins.append((plugin, section))

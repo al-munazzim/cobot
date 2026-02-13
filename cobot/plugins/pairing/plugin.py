@@ -242,6 +242,61 @@ class PairingPlugin(Plugin):
                 click.echo(f"✗ User not found: {channel}:{user_id}", err=True)
                 raise SystemExit(1)
 
+    # --- Setup Wizard Extension ---
+
+    def wizard_section(self) -> dict | None:
+        """Return wizard section info for pairing."""
+        return {
+            "key": "pairing",
+            "name": "User Authorization",
+            "description": "Control who can interact with the bot",
+        }
+
+    def wizard_configure(self, config: dict) -> dict:
+        """Interactive pairing configuration for the setup wizard."""
+        import click
+
+        click.echo("\nUser authorization via pairing codes.")
+        click.echo("Unknown users will need approval before chatting.\n")
+
+        enabled = click.confirm("Enable pairing?", default=True)
+        if not enabled:
+            return {"enabled": False}
+
+        # Owner IDs per channel
+        owner_ids = {}
+        click.echo("\nAdd owner IDs (always authorized, no pairing needed):")
+
+        # Check if telegram is configured
+        if "telegram" in config:
+            if click.confirm("Add Telegram owner ID?", default=True):
+                telegram_id = click.prompt("Your Telegram user ID")
+                owner_ids["telegram"] = [telegram_id]
+
+        # Generic channel
+        while click.confirm("Add owner ID for another channel?", default=False):
+            channel = click.prompt("Channel name (e.g., discord, nostr)")
+            user_id = click.prompt(f"Your {channel} user ID")
+            if channel not in owner_ids:
+                owner_ids[channel] = []
+            owner_ids[channel].append(user_id)
+
+        # Skip channels
+        skip_channels = []
+        if click.confirm("Skip pairing for any channels?", default=False):
+            channels = click.prompt(
+                "Channels to skip (comma-separated)", default="nostr"
+            )
+            skip_channels = [c.strip() for c in channels.split(",")]
+
+        result = {"enabled": True}
+        if owner_ids:
+            result["owner_ids"] = owner_ids
+        if skip_channels:
+            result["skip_channels"] = skip_channels
+
+        return result
+
 
 def create_plugin() -> PairingPlugin:
     """Factory function."""
