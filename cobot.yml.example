@@ -17,7 +17,7 @@ trusted:
 ppq:
   api_base: "https://api.ppq.ai/v1"
   api_key: "${PPQ_API_KEY}"  # Set via environment variable
-  model: "gpt-4o"
+  model: "openai/gpt-4o"
 
 # Ollama (local) - alternative
 ollama:

@@ -500,8 +500,8 @@ def init(non_interactive: bool):
         # Use defaults for core config
         config["ppq"] = {
             "api_base": "https://api.ppq.ai/v1",
-            "api_key": "${PPQ_API_KEY}",
-            "model": "gpt-4o",
+            # api_key from PPQ_API_KEY env var
+            "model": "openai/gpt-4o",
         }
         config["exec"] = {"enabled": True, "timeout": 30}
     else:
@@ -526,12 +526,14 @@ def init(non_interactive: bool):
                 default="${PPQ_API_KEY}",
                 show_default=True,
             )
-            model = click.prompt("  Model", default="gpt-4o")
+            model = click.prompt("  Model", default="openai/gpt-4o")
             config["ppq"] = {
                 "api_base": "https://api.ppq.ai/v1",
-                "api_key": api_key,
+                # Note: ${VAR} doesn't expand in YAML - use env var directly or set value
                 "model": model,
             }
+            if api_key != "${PPQ_API_KEY}":
+                config["ppq"]["api_key"] = api_key
         else:
             click.echo("\n  Ollama Configuration (local)")
             base_url = click.prompt("  URL", default="http://localhost:11434")
