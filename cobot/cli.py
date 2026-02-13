@@ -377,46 +377,45 @@ def config():
     pass
 
 
+def _mask_secrets(data: dict, parent_key: str = "") -> dict:
+    """Mask sensitive values in config dict."""
+    secret_keys = {"api_key", "secret", "password", "token", "private_key"}
+    result = {}
+    for k, v in data.items():
+        if isinstance(v, dict):
+            result[k] = _mask_secrets(v, k)
+        elif k in secret_keys and isinstance(v, str) and len(v) > 4:
+            result[k] = f"***{v[-4:]}"
+        else:
+            result[k] = v
+    return result
+
+
 @config.command("show")
-@click.option("--raw", is_flag=True, help="Show raw YAML")
-@click.option(
-    "--config",
-    "-c",
-    "config_path",
-    type=click.Path(),
-    help="Config file (default: cobot.yml)",
-)
-def config_show(raw: bool, config_path: Optional[str]):
+@click.option("--reveal", is_flag=True, help="Show secrets unmasked")
+def config_show(reveal: bool):
     """Show current configuration.
 
     Keys shown can be used with 'config get/set' commands.
+    Secrets are masked by default (use --reveal to show).
     """
-
-    if raw:
-        path = Path(config_path) if config_path else Path("cobot.yml")
-        if path.exists():
-            click.echo(path.read_text())
-        else:
-            click.echo(f"Config file not found: {path}", err=True)
-        return
+    import yaml
 
     cfg = load_merged_config()
 
-    # Show with actual YAML keys for use with get/set
-    click.echo("identity:")
-    click.echo(f"  name: {cfg.identity_name}")
-    click.echo("\npolling:")
-    click.echo(f"  interval_seconds: {cfg.polling_interval}")
-    click.echo(f"\nprovider: {cfg.provider}")
-    click.echo("\npaths:")
-    click.echo(f"  skills: {cfg.skills_path}")
-    click.echo(f"  plugins: {cfg.plugins_path}")
-    click.echo(f"  memory: {cfg.memory_path}")
-    click.echo("\nexec:")
-    click.echo(f"  enabled: {cfg.exec_enabled}")
-    click.echo(f"  timeout: {cfg.exec_timeout}")
+    # Get raw config and mask secrets
+    data = cfg._raw.copy() if cfg._raw else {}
 
-    click.echo("\n# Use 'cobot config get <key>' or 'cobot config set <key> <value>'")
+    if not reveal:
+        data = _mask_secrets(data)
+
+    if data:
+        click.echo(yaml.dump(data, default_flow_style=False, sort_keys=False))
+    else:
+        click.echo("# No configuration loaded")
+        click.echo("# Create ~/.cobot/cobot.yml or ./cobot.yml")
+
+    click.echo("# Use 'cobot config get <key>' or 'cobot config set <key> <value>'")
 
 
 @config.command("edit")

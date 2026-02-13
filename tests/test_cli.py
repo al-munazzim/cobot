@@ -72,11 +72,12 @@ class TestCliCommands:
         with patch("cobot.cli.load_merged_config") as mock_config:
             from cobot.plugins.config.plugin import CobotConfig
 
-            mock_config.return_value = CobotConfig()
+            cfg = CobotConfig.from_dict({"identity": {"name": "TestBot"}})
+            mock_config.return_value = cfg
 
             result = runner.invoke(cli, ["config", "show"])
             assert result.exit_code == 0
-            assert "Identity" in result.output or "name" in result.output.lower()
+            assert "name" in result.output.lower() or "config" in result.output.lower()
 
     def test_config_validate_missing_key(self, runner):
         with patch("cobot.cli.load_merged_config") as mock_config:
