@@ -14,10 +14,8 @@ from cobot.plugins import (
     init_plugins,
     run,
     LLMProvider,
-    CommunicationProvider,  # Legacy interface, kept for compatibility
     ToolProvider,
     LLMError,
-    CommunicationError,
 )
 from cobot.plugins.communication import OutgoingMessage
 

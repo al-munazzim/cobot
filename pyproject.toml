@@ -56,3 +56,8 @@ exclude = ["tests*", "memory*", "skills*"]
 testpaths = ["tests", "cobot/plugins"]
 python_files = "test_*.py"
 python_functions = "test_*"
+
+[tool.ruff]
+exclude = [
+    "cobot/plugins/nostr/tests/",  # pynostr is optional dependency
+]

@@ -7,7 +7,6 @@ Priority: 10 (after communication, before channels)
 """
 
 import sys
-from typing import Optional
 
 from ..base import Plugin, PluginMeta
 from ..communication import IncomingMessage, OutgoingMessage

@@ -3,12 +3,12 @@
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
 
-from cobot.cli import cli, load_merged_config, read_pid, write_pid, remove_pid
+from cobot.cli import cli, load_merged_config, read_pid, write_pid
 
 
 class TestPidFile:
@@ -20,9 +20,8 @@ class TestPidFile:
                 mock_path.return_value = Path(f.name)
 
                 write_pid(12345)
-                pid = read_pid()
+                _ = read_pid()  # May return None if process doesn't exist
 
-                # read_pid checks if process exists, so it might return None
                 # Just verify the file was written
                 assert Path(f.name).read_text().strip() == "12345"
 

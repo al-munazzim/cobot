@@ -373,7 +373,6 @@ def config_show(raw: bool, config_path: Optional[str]):
 
     Keys shown can be used with 'config get/set' commands.
     """
-    import yaml
 
     if raw:
         path = Path(config_path) if config_path else Path("cobot.yml")

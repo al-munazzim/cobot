@@ -18,7 +18,6 @@ pytestmark = pytest.mark.skipif(
     not PYNOSTR_AVAILABLE, reason="pynostr not installed"
 )
 
-from unittest.mock import Mock, patch, MagicMock
 
 from ..plugin import NostrPlugin, create_plugin
 from ...interfaces import Message, CommunicationError

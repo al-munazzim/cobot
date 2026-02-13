@@ -1,6 +1,5 @@
 """Tests for context plugin."""
 
-import pytest
 
 from .. import create_plugin
 
