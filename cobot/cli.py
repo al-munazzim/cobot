@@ -441,6 +441,24 @@ inference:
     subprocess.run([editor, str(config_path)])
 
 
+def _find_config_path(explicit_path: Optional[str] = None) -> Path:
+    """Find config file path (same logic as config loading)."""
+    if explicit_path:
+        return Path(explicit_path)
+
+    # Check local first, then home
+    local_config = Path("cobot.yml")
+    if local_config.exists():
+        return local_config
+
+    home_config = Path.home() / ".cobot" / "cobot.yml"
+    if home_config.exists():
+        return home_config
+
+    # Default to home config for new files
+    return home_config
+
+
 @config.command("set")
 @click.argument("key")
 @click.argument("value")
@@ -449,7 +467,7 @@ inference:
     "-c",
     "config_path",
     type=click.Path(),
-    help="Config file (default: cobot.yml)",
+    help="Config file (default: ~/.cobot/cobot.yml or ./cobot.yml)",
 )
 def config_set(key: str, value: str, config_path: Optional[str]):
     """Set a configuration value.
@@ -463,7 +481,7 @@ def config_set(key: str, value: str, config_path: Optional[str]):
     """
     import yaml
 
-    path = Path(config_path) if config_path else Path("cobot.yml")
+    path = _find_config_path(config_path)
 
     # Load existing config or start fresh
     if path.exists():
@@ -517,7 +535,7 @@ def config_set(key: str, value: str, config_path: Optional[str]):
     "-c",
     "config_path",
     type=click.Path(),
-    help="Config file (default: cobot.yml)",
+    help="Config file (default: ~/.cobot/cobot.yml or ./cobot.yml)",
 )
 def config_get(key: str, config_path: Optional[str]):
     """Get a configuration value.
@@ -526,7 +544,7 @@ def config_get(key: str, config_path: Optional[str]):
     """
     import yaml
 
-    path = Path(config_path) if config_path else Path("cobot.yml")
+    path = _find_config_path(config_path)
 
     if not path.exists():
         click.echo(f"Config file not found: {path}", err=True)
