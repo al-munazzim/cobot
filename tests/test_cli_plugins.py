@@ -432,42 +432,38 @@ class TestRegisterPluginCommands:
         # Should not raise even if plugins aren't available
         register_plugin_commands()
 
-    @patch("cobot.plugins.get_registry")
-    @patch("cobot.plugins.init_plugins")
-    def test_calls_register_commands_on_plugins(self, mock_init, mock_registry):
+    @patch("cobot.plugins.discover_plugins")
+    def test_calls_register_commands_on_plugins(self, mock_discover):
         """Test that register_commands is called on each plugin."""
         from cobot.cli import register_plugin_commands, cli
 
-        mock_plugin = Mock()
-        mock_plugin.meta.id = "test"
-        mock_registry.return_value.all_plugins.return_value = [mock_plugin]
+        mock_plugin_class = Mock()
+        mock_plugin_instance = Mock()
+        mock_plugin_class.return_value = mock_plugin_instance
+        mock_discover.return_value = [mock_plugin_class]
 
         register_plugin_commands()
 
-        mock_plugin.register_commands.assert_called_once_with(cli)
+        mock_plugin_instance.register_commands.assert_called_once_with(cli)
 
-    @patch("cobot.plugins.get_registry")
-    @patch("cobot.plugins.init_plugins")
-    def test_continues_on_plugin_error(self, mock_init, mock_registry, capsys):
+    @patch("cobot.plugins.discover_plugins")
+    def test_continues_on_plugin_error(self, mock_discover):
         """Test that one plugin error doesn't stop others."""
         from cobot.cli import register_plugin_commands
 
-        bad_plugin = Mock()
-        bad_plugin.meta.id = "bad"
-        bad_plugin.register_commands.side_effect = Exception("Plugin error")
+        bad_plugin_class = Mock()
+        bad_plugin_instance = Mock()
+        bad_plugin_instance.register_commands.side_effect = Exception("Plugin error")
+        bad_plugin_class.return_value = bad_plugin_instance
 
-        good_plugin = Mock()
-        good_plugin.meta.id = "good"
+        good_plugin_class = Mock()
+        good_plugin_instance = Mock()
+        good_plugin_class.return_value = good_plugin_instance
 
-        mock_registry.return_value.all_plugins.return_value = [bad_plugin, good_plugin]
+        mock_discover.return_value = [bad_plugin_class, good_plugin_class]
 
         register_plugin_commands()
 
-        # Both should be called
-        bad_plugin.register_commands.assert_called_once()
-        good_plugin.register_commands.assert_called_once()
-
-        # Warning should be printed
-        captured = capsys.readouterr()
-        assert "Warning" in captured.err
-        assert "bad" in captured.err
+        # Both should be called (error in one doesn't stop others)
+        bad_plugin_instance.register_commands.assert_called_once()
+        good_plugin_instance.register_commands.assert_called_once()

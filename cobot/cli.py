@@ -139,6 +139,9 @@ def run(
         # Load plugins with config (async init)
         import asyncio
 
+        # Reset registry (may have been populated by CLI command registration)
+        plugin_system.reset_registry()
+
         plugins_dir = Path(plugins) if plugins else Path("cobot/plugins")
         if plugins_dir.exists():
             registry = asyncio.run(
@@ -627,27 +630,38 @@ def run_tests(verbose: bool):
 
 
 def register_plugin_commands():
-    """Load plugins and let them register CLI commands."""
+    """Load plugins and let them register CLI commands.
+
+    This does a lightweight load - discovers plugins and instantiates them
+    for CLI command registration, but doesn't fully start them.
+    """
     try:
-        from cobot.plugins import init_plugins, get_registry
+        from cobot.plugins import discover_plugins
 
-        # Try to initialize plugins (may fail if no config)
-        try:
-            init_plugins()
-        except Exception:
-            pass  # Config may not exist yet
+        # Try to find plugins directory
+        plugins_dir = None
+        candidates = [
+            Path("cobot/plugins"),
+            Path(__file__).parent / "plugins",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                plugins_dir = candidate
+                break
 
-        registry = get_registry()
-        if registry:
-            for plugin in registry.all_plugins():
-                try:
-                    plugin.register_commands(cli)
-                except Exception as e:
-                    # Don't fail CLI if plugin command registration fails
-                    click.echo(
-                        f"Warning: Plugin {plugin.meta.id} command registration failed: {e}",
-                        err=True,
-                    )
+        if not plugins_dir:
+            return
+
+        # Discover plugin classes (don't start them)
+        plugin_classes = discover_plugins(plugins_dir)
+
+        # Create instances and register CLI commands
+        for plugin_class in plugin_classes:
+            try:
+                instance = plugin_class()
+                instance.register_commands(cli)
+            except Exception:
+                pass  # Ignore failures during CLI discovery
     except Exception:
         pass  # Plugins not available
 
