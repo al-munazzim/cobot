@@ -1,6 +1,7 @@
 """Tests for main Cobot agent class."""
 
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
@@ -15,6 +16,7 @@ from cobot.plugins import (
     Message,
     CommunicationError,
 )
+from cobot.plugins.session import IncomingMessage, OutgoingMessage
 
 
 @pytest.fixture(autouse=True)
@@ -53,8 +55,18 @@ def mock_registry():
     tools_plugin.get_definitions.return_value = []
     tools_plugin.restart_requested = False
 
+    # Mock session plugin
+    session_plugin = Mock()
+    session_plugin.poll_all_channels.return_value = []
+    session_plugin.send.return_value = True
+    session_plugin.typing.return_value = None
+    session_plugin.get_channels.return_value = ["telegram"]
+
     def get_plugin(name):
-        plugins = {"config": config_plugin}
+        plugins = {
+            "config": config_plugin,
+            "session": session_plugin,
+        }
         return plugins.get(name)
 
     def get_by_capability(cap):
@@ -132,18 +144,21 @@ class TestCobot:
         assert "API failed" in response
 
 
-class TestNostrIntegration:
-    """Test communication message handling."""
+class TestSessionIntegration:
+    """Test session-based message handling."""
 
     def test_handle_message(self, mock_registry):
-        """Should respond to incoming message."""
+        """Should respond to incoming message via session."""
         bot = Cobot(mock_registry)
 
-        msg = Message(
-            id="event1",
-            sender="npub1sender",
+        msg = IncomingMessage(
+            id="msg1",
+            channel_type="telegram",
+            channel_id="-100123",
+            sender_id="456",
+            sender_name="alice",
             content="Hello bot!",
-            timestamp=1000,
+            timestamp=datetime.now(),
         )
 
         bot.handle_message(msg)
@@ -151,22 +166,32 @@ class TestNostrIntegration:
         # Should have called LLM
         mock_registry.get_by_capability("llm").chat.assert_called_once()
 
-        # Should have sent response
-        comm = mock_registry.get_by_capability("communication")
-        comm.send.assert_called_once()
-        call_args = comm.send.call_args
-        assert call_args[0][0] == "npub1sender"
-        assert call_args[0][1] == "Hello human!"
+        # Should have shown typing indicator
+        session = mock_registry.get("session")
+        session.typing.assert_called_once_with("telegram", "-100123")
+
+        # Should have sent response via session
+        session.send.assert_called_once()
+        call_args = session.send.call_args
+        outgoing = call_args[0][0]
+        assert isinstance(outgoing, OutgoingMessage)
+        assert outgoing.channel_type == "telegram"
+        assert outgoing.channel_id == "-100123"
+        assert outgoing.content == "Hello human!"
+        assert outgoing.reply_to == "msg1"
 
     def test_handle_message_dedup(self, mock_registry):
         """Should not process same message twice."""
         bot = Cobot(mock_registry)
 
-        msg = Message(
-            id="event1",
-            sender="npub1sender",
+        msg = IncomingMessage(
+            id="msg1",
+            channel_type="telegram",
+            channel_id="-100123",
+            sender_id="456",
+            sender_name="alice",
             content="Hello!",
-            timestamp=1000,
+            timestamp=datetime.now(),
         )
 
         # Process same message twice
@@ -177,11 +202,19 @@ class TestNostrIntegration:
         assert mock_registry.get_by_capability("llm").chat.call_count == 1
 
     def test_poll_messages(self, mock_registry):
-        """Should poll and handle messages."""
-        comm_plugin = mock_registry.get_by_capability("communication")
-        comm_plugin.receive.return_value = [
-            Message("e1", "npub1a", "Hi", 1000),
-            Message("e2", "npub1b", "Hello", 2000),
+        """Should poll and handle messages via session."""
+        session = mock_registry.get("session")
+        session.poll_all_channels.return_value = [
+            IncomingMessage(
+                id="e1", channel_type="telegram", channel_id="-100123",
+                sender_id="1", sender_name="alice", content="Hi",
+                timestamp=datetime.now(),
+            ),
+            IncomingMessage(
+                id="e2", channel_type="telegram", channel_id="-100123",
+                sender_id="2", sender_name="bob", content="Hello",
+                timestamp=datetime.now(),
+            ),
         ]
 
         bot = Cobot(mock_registry)
@@ -192,17 +225,17 @@ class TestNostrIntegration:
 
     def test_poll_error(self, mock_registry):
         """Should handle poll errors gracefully."""
-        comm_plugin = mock_registry.get_by_capability("communication")
-        comm_plugin.receive.side_effect = CommunicationError("Connection failed")
+        session = mock_registry.get("session")
+        session.poll_all_channels.side_effect = Exception("Connection failed")
 
         bot = Cobot(mock_registry)
         count = bot.poll()
 
         assert count == 0  # No crash, returns 0
 
-    def test_poll_no_communication(self, mock_registry):
-        """Should handle missing communication plugin."""
-        mock_registry.get_by_capability = Mock(return_value=None)
+    def test_poll_no_session(self, mock_registry):
+        """Should handle missing session plugin."""
+        mock_registry.get = Mock(return_value=None)
 
         bot = Cobot(mock_registry)
         count = bot.poll()
