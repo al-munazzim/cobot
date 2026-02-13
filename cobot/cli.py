@@ -16,8 +16,8 @@ import click
 
 def get_config_paths() -> tuple[Path, Path]:
     """Get home and local config paths."""
-    home_config = Path.home() / ".cobot" / "config.yaml"
-    local_config = Path("config.yaml")
+    home_config = Path.home() / ".cobot" / "cobot.yml"
+    local_config = Path("cobot.yml")
     return home_config, local_config
 
 
@@ -420,26 +420,39 @@ def config_show(reveal: bool):
 
 
 @config.command("edit")
-def config_edit():
-    """Edit local config in $EDITOR."""
-    editor = os.environ.get("EDITOR", "nano")
-    config_path = Path("config.yaml")
+@click.option(
+    "--config",
+    "-c",
+    "config_path",
+    type=click.Path(),
+    help="Config file to edit",
+)
+def config_edit(config_path: Optional[str]):
+    """Edit config in $EDITOR."""
+    editor = os.environ.get("EDITOR", "vi")
+    path = _find_config_path(config_path)
 
-    if not config_path.exists():
+    if not path.exists():
+        # Create parent directory if needed
+        path.parent.mkdir(parents=True, exist_ok=True)
         # Create default config
-        config_path.write_text("""# Cobot Configuration
+        path.write_text("""# Cobot Configuration
+provider: ppq
 
 identity:
-  name: "Cobot"
+  name: "MyAgent"
 
-polling:
-  interval_seconds: 30
+ppq:
+  # api_key: "your-key-here"  # or set PPQ_API_KEY env var
+  model: "openai/gpt-4o"
 
-inference:
-  model: "gpt-5-nano"
+exec:
+  enabled: true
+  timeout: 30
 """)
+        click.echo(f"Created new config at {path}", err=True)
 
-    subprocess.run([editor, str(config_path)])
+    subprocess.run([editor, str(path)])
 
 
 def _find_config_path(explicit_path: Optional[str] = None) -> Path:
@@ -648,7 +661,13 @@ def wizard():
 @click.option(
     "--non-interactive", "-y", is_flag=True, help="Use defaults, don't prompt"
 )
-def init(non_interactive: bool):
+@click.option(
+    "--home", is_flag=True, help="Create config in ~/.cobot/ instead of current dir"
+)
+@click.option(
+    "--config", "-c", "config_path_opt", type=click.Path(), help="Config file path"
+)
+def init(non_interactive: bool, home: bool, config_path_opt: Optional[str]):
     """Initialize cobot configuration.
 
     Interactive wizard to set up cobot.yml with plugins and credentials.
@@ -656,10 +675,15 @@ def init(non_interactive: bool):
     """
     import yaml
 
-    config_path = Path("cobot.yml")
+    if config_path_opt:
+        config_path = Path(config_path_opt)
+    elif home:
+        config_path = Path.home() / ".cobot" / "cobot.yml"
+    else:
+        config_path = Path("cobot.yml")
 
     if config_path.exists() and not non_interactive:
-        if not click.confirm("cobot.yml already exists. Overwrite?"):
+        if not click.confirm(f"{config_path} already exists. Overwrite?"):
             click.echo("Aborted.")
             return
 
@@ -775,12 +799,15 @@ def init(non_interactive: bool):
 
     # --- Write Configuration ---
 
+    # Create parent directory if needed
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
     with open(config_path, "w") as f:
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
     click.echo(f"\n✅ Configuration written to {config_path}")
     click.echo("\nNext steps:")
-    click.echo("  1. Review and edit cobot.yml")
+    click.echo(f"  1. Review and edit {config_path}")
     click.echo("  2. Set environment variables (PPQ_API_KEY, etc.)")
     click.echo("  3. Run: cobot run")
 
