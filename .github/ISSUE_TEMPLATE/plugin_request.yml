@@ -1,0 +1,65 @@
+name: 🔌 Plugin Request
+description: Request a new plugin or integration
+labels: ["plugin", "enhancement"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Want a new plugin? Describe what you need!
+
+  - type: input
+    id: name
+    attributes:
+      label: Plugin Name
+      description: What would you call this plugin?
+      placeholder: "discord, homeassistant, gmail..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: capability
+    attributes:
+      label: Capability Type
+      description: What capability would this plugin provide?
+      options:
+        - communication (messaging channel)
+        - llm (AI provider)
+        - tools (new tools)
+        - wallet (payment method)
+        - memory (storage/recall)
+        - security (protection)
+        - other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What should this plugin do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: api
+    attributes:
+      label: API / Integration Details
+      description: Links to APIs, documentation, or services this would integrate with
+
+  - type: checkboxes
+    id: extension_points
+    attributes:
+      label: Extension Points
+      description: Would this plugin use extension points?
+      options:
+        - label: Defines new extension points for others to implement
+        - label: Implements existing extension points
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I'm willing to implement this plugin
+        - label: I have experience with this API/service

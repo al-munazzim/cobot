@@ -1,50 +1,110 @@
-# 🤖 Cobot
+<p align="center">
+  <img src="docs/logo.svg" alt="Cobot Logo" width="200">
+</p>
 
-**Minimal self-sovereign AI agent with Nostr identity and Lightning wallet.**
+<h1 align="center">🤖 Cobot</h1>
 
-Cobot is a lightweight personal AI agent that runs on your hardware, identifies via Nostr, and transacts via Lightning Network. Unlike cloud-hosted assistants or complex frameworks, Cobot gives you true ownership: *your keys, your identity, your agent*.
+<p align="center">
+  <strong>Minimal self-sovereign AI agent with Nostr identity and Lightning wallet</strong>
+</p>
 
-## ✨ Features
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#plugins">Plugins</a> •
+  <a href="#architecture">Architecture</a> •
+  <a href="#contributing">Contributing</a>
+</p>
 
-- **🪶 Minimal** — ~2K lines of Python, no bloat
-- **🔌 Plugin Architecture** — Extensible via plugins with extension points
-- **⚡ Lightning Wallet** — Send and receive sats autonomously
-- **🔑 Nostr Identity** — Cryptographic identity via npub/nsec
-- **🔥 Hot Reload** — Auto-restart on plugin changes
-- **🤖 Multi-LLM** — PPQ, Ollama, OpenRouter, and more
-- **📁 FileDrop** — File-based communication with Schnorr signatures
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python 3.11+">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="MIT License">
+  <img src="https://img.shields.io/badge/status-alpha-orange.svg" alt="Alpha">
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome">
+</p>
 
-## 🚀 Quick Start
+<p align="center">
+  <img src="https://img.shields.io/badge/⚡-Lightning-yellow.svg" alt="Lightning">
+  <img src="https://img.shields.io/badge/🔑-Nostr-purple.svg" alt="Nostr">
+  <img src="https://img.shields.io/badge/🔌-Plugins-blue.svg" alt="Plugins">
+</p>
 
-```bash
-# Install
-pip install cobot
+---
 
-# Or from source
-git clone https://forgejo.tail593e12.ts.net/Zeus/cobot
-cd cobot
-pip install -e .
+## What is Cobot?
 
-# Configure
-cp cobot.yml.example cobot.yml
-# Edit cobot.yml with your settings
+Cobot is a **lightweight personal AI agent** that runs on your hardware, identifies via Nostr, and transacts via Lightning Network. 
 
-# Run
-cobot run
+Unlike cloud-hosted assistants or complex frameworks, Cobot gives you true ownership:
+
+> *Your keys, your identity, your agent.*
+
+```
+┌─────────────────────────────────────┐
+│           Your Hardware             │  ← Physical control
+├─────────────────────────────────────┤
+│          Cobot Runtime              │  ← Self-hosted (~2K lines)
+├─────────────────────────────────────┤
+│    Nostr Identity (npub/nsec)       │  ← Self-sovereign ID
+├─────────────────────────────────────┤
+│   Lightning Wallet (npub.cash)      │  ← Self-sovereign money
+├─────────────────────────────────────┤
+│      LLM (local or cloud)           │  ← Flexible inference
+└─────────────────────────────────────┘
 ```
 
-## 📋 Requirements
+## Features
 
-- Python 3.11+
-- LLM API key (PPQ, OpenRouter, or local Ollama)
+| Feature | Description |
+|---------|-------------|
+| 🪶 **Minimal** | ~2K lines of Python, no bloat |
+| 🔌 **Plugin Architecture** | Extensible via plugins with extension points |
+| ⚡ **Lightning Wallet** | Send and receive sats autonomously |
+| 🔑 **Nostr Identity** | Cryptographic identity via npub/nsec |
+| 🔥 **Hot Reload** | Auto-restart on plugin changes |
+| 🤖 **Multi-LLM** | PPQ, Ollama, OpenRouter, and more |
+| 📁 **FileDrop** | File-based communication with Schnorr signatures |
+| 🧩 **Extension Points** | Plugins can define hooks for others to implement |
 
-## ⚙️ Configuration
+## Quick Start
 
-Create `cobot.yml`:
+### Install
+
+```bash
+# From PyPI (when published)
+pip install cobot
+
+# From source
+git clone https://github.com/ultanio/cobot
+cd cobot
+pip install -e .
+```
+
+### Configure
+
+```bash
+cp cobot.yml.example cobot.yml
+# Edit cobot.yml with your API keys
+```
+
+### Run
+
+```bash
+# Start agent
+cobot run
+
+# Interactive mode
+cobot run --stdin
+
+# Check status
+cobot status
+```
+
+## Configuration
 
 ```yaml
-# LLM Provider (ppq, ollama)
-provider: ppq
+# cobot.yml
+provider: ppq  # or: ollama
 
 identity:
   name: "MyAgent"
@@ -57,48 +117,63 @@ ppq:
 nostr:
   relays:
     - "wss://relay.damus.io"
-    - "wss://nos.lol"
 
-# Optional: FileDrop for file-based comms
-filedrop:
-  base_dir: "/tmp/filedrop"
-  identity: "MyAgent"
+# Optional: Lightning wallet
+wallet:
+  provider: "npub.cash"
 
-# Tools
+# Tool execution
 exec:
   enabled: true
   timeout: 30
 ```
 
-## 🔌 Plugin System
+## Plugins
 
-Cobot uses a plugin architecture with **extension points** — plugins can define hooks that other plugins implement.
+Cobot uses a **plugin architecture** where functionality is modular and extensible.
 
 ### Built-in Plugins
 
 | Plugin | Capability | Description |
 |--------|------------|-------------|
 | `config` | — | Configuration management |
-| `ppq` | llm | PPQ.ai LLM provider |
-| `ollama` | llm | Local Ollama models |
-| `nostr` | communication | Nostr DMs (NIP-04) |
-| `filedrop` | communication | File-based messaging |
-| `wallet` | wallet | Lightning via npub.cash |
-| `tools` | tools | Shell, file, restart tools |
+| `ppq` | `llm` | PPQ.ai LLM provider |
+| `ollama` | `llm` | Local Ollama models |
+| `nostr` | `communication` | Nostr DMs (NIP-04) |
+| `filedrop` | `communication` | File-based messaging |
+| `wallet` | `wallet` | Lightning via npub.cash |
+| `tools` | `tools` | Shell, file operations |
 | `hotreload` | — | Auto-restart on changes |
+| `security` | — | Prompt injection shield |
 
 ### Extension Points
 
-Plugins can define extension points that other plugins implement:
+Cobot's **unique** feature: plugins can define extension points that other plugins implement.
+
+```
+┌─────────────┐                    ┌─────────────────┐
+│   filedrop  │ ──defines──────►   │ Extension Point │
+│   plugin    │                    │ filedrop.verify │
+└─────────────┘                    └────────┬────────┘
+                                            │
+                                   implements
+                                            │
+                                   ┌────────▼────────┐
+                                   │ filedrop-nostr  │
+                                   │     plugin      │
+                                   └─────────────────┘
+```
+
+Example:
 
 ```python
-# filedrop/plugin.py defines:
+# filedrop defines extension point
 meta = PluginMeta(
     id="filedrop",
     extension_points=["filedrop.before_write", "filedrop.after_read"],
 )
 
-# filedrop-nostr/plugin.py implements:
+# filedrop-nostr implements it
 meta = PluginMeta(
     id="filedrop-nostr",
     implements={
@@ -110,29 +185,47 @@ meta = PluginMeta(
 
 ### Adding Plugins
 
-1. **System-wide:** `/opt/cobot/plugins/`
+Place plugins in one of these directories:
+
+1. **System:** `/opt/cobot/plugins/`
 2. **User:** `~/.cobot/plugins/`
 3. **Project:** `./plugins/`
 
-Each plugin directory needs a `plugin.py` with a `create_plugin()` factory function.
+Each plugin needs a `plugin.py` with a `create_plugin()` factory function.
 
-## 🔐 Self-Sovereign Stack
+## Architecture
 
 ```
-┌─────────────────────────────────────┐
-│           Your Hardware             │  ← Physical control
-├─────────────────────────────────────┤
-│          Cobot Runtime              │  ← Self-hosted
-├─────────────────────────────────────┤
-│    Nostr Identity (npub/nsec)       │  ← Self-sovereign ID
-├─────────────────────────────────────┤
-│   Lightning Wallet (npub.cash)      │  ← Self-sovereign money
-├─────────────────────────────────────┤
-│      LLM (local or cloud)           │  ← Flexible inference
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    PLUGIN REGISTRY                           │
+│  Registration │ Dependency resolution │ Extension points    │
+├─────────────────────────────────────────────────────────────┤
+│                      PLUGINS                                 │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐           │
+│  │ config  │ │   llm   │ │  comms  │ │ wallet  │  ...      │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────┘           │
+├─────────────────────────────────────────────────────────────┤
+│                  EXTENSION POINTS                            │
+│         Plugins define hooks → Others implement              │
+├─────────────────────────────────────────────────────────────┤
+│                   HOOK CHAIN                                 │
+│  on_message → transform → llm_call → tool_exec → response  │
+├─────────────────────────────────────────────────────────────┤
+│                   CORE AGENT                                 │
+│            Message loop │ Tool execution                     │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## 🛠️ CLI Commands
+### Core Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Registry** | Central plugin management, dependency resolution |
+| **Capability** | What a plugin provides: `llm`, `communication`, `wallet` |
+| **Extension Point** | Hook that plugins can define for others to implement |
+| **Hook Chain** | Lifecycle events that plugins can intercept |
+
+## CLI Reference
 
 ```bash
 cobot run              # Start the agent
@@ -142,9 +235,22 @@ cobot restart          # Restart running agent
 cobot wallet balance   # Check wallet balance
 cobot wallet address   # Show Lightning address
 cobot config show      # Show configuration
+cobot config validate  # Validate configuration
 ```
 
-## 🧪 Development
+## Why Cobot?
+
+| Feature | Cobot | OpenClaw | Others |
+|---------|-------|----------|--------|
+| **Lines of code** | ~2K | 430K+ | Varies |
+| **Self-sovereign** | ✅ | ⚠️ | ❌ Cloud |
+| **Nostr identity** | ✅ Native | ❌ | ❌ |
+| **Lightning wallet** | ✅ Native | ❌ | ❌ |
+| **Extension points** | ✅ Unique | ❌ | ❌ |
+| **Hot reload** | ✅ | ❌ | ❌ |
+| **Plugin system** | ✅ | ✅ Skills | Varies |
+
+## Development
 
 ```bash
 # Install dev dependencies
@@ -153,53 +259,43 @@ pip install -e ".[dev]"
 # Run tests
 pytest
 
-# Run with verbose output
-cobot run --verbose
+# Lint
+ruff check cobot/
+
+# Format
+ruff format cobot/
 ```
 
-## 📊 Architecture
+## Contributing
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    PLUGIN REGISTRY                           │
-│  Registration │ Dependency resolution │ Extension points    │
-├─────────────────────────────────────────────────────────────┤
-│                      PLUGINS                                 │
-│  config │ ppq/ollama │ nostr │ filedrop │ wallet │ tools   │
-├─────────────────────────────────────────────────────────────┤
-│                  EXTENSION POINTS                            │
-│  Plugins define hooks → Other plugins implement them         │
-├─────────────────────────────────────────────────────────────┤
-│                   HOOK CHAIN                                 │
-│  on_message_received → transform → llm_call → tool_exec    │
-├─────────────────────────────────────────────────────────────┤
-│                   CORE AGENT                                 │
-│  Message loop │ LLM integration │ Tool execution            │
-└─────────────────────────────────────────────────────────────┘
-```
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## 🆚 Why Cobot?
+### Quick Links
 
-| Feature | Cobot | OpenClaw | Other Agents |
-|---------|-------|----------|--------------|
-| Minimal | ✅ ~2K lines | ❌ 430K lines | Varies |
-| Self-sovereign | ✅ Your hardware | ⚠️ Self-hosted | ❌ Cloud |
-| Nostr identity | ✅ Native | ❌ | ❌ |
-| Lightning wallet | ✅ Native | ❌ | ❌ |
-| Extension points | ✅ Unique | ❌ | ❌ |
-| Hot reload | ✅ | ❌ | ❌ |
+- 🐛 [Report a bug](.github/ISSUE_TEMPLATE/bug_report.yml)
+- ✨ [Request a feature](.github/ISSUE_TEMPLATE/feature_request.yml)
+- 🔌 [Request a plugin](.github/ISSUE_TEMPLATE/plugin_request.yml)
 
-## 📜 License
+## Roadmap
+
+- [ ] Container isolation for tool execution
+- [ ] Smart LLM routing (cost optimization)
+- [ ] More messaging channels (Telegram, Discord)
+- [ ] Agent-to-agent protocol
+- [ ] Nostr relay for agent discovery
+
+## License
 
 MIT License — see [LICENSE](LICENSE) for details.
 
-## 🤝 Contributing
+## Links
 
-Contributions welcome! Please read the architecture docs first.
-
-## 🔗 Links
-
-- [Documentation](https://forgejo.tail593e12.ts.net/Zeus/cobot#readme)
-- [Issues](https://forgejo.tail593e12.ts.net/Zeus/cobot/issues)
 - [Nostr](https://nostr.com) — Decentralized social protocol
 - [Lightning](https://lightning.network) — Bitcoin payment layer
+- [npub.cash](https://npub.cash) — Lightning wallet for Nostr
+
+---
+
+<p align="center">
+  <sub>Built with ⚡ by agents, for agents</sub>
+</p>
