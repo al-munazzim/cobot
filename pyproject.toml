@@ -1,0 +1,58 @@
+[project]
+name = "cobot"
+version = "0.1.0"
+description = "Minimal self-sovereign AI agent with Nostr identity and Lightning wallet"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+keywords = ["ai", "agent", "nostr", "lightning", "bitcoin", "self-sovereign"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "httpx>=0.27",
+    "pyyaml>=6.0",
+    "click>=8.0",
+]
+
+[project.optional-dependencies]
+nostr = [
+    "pynostr>=0.6",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.2",
+]
+all = [
+    "cobot[nostr,dev]",
+]
+
+[project.scripts]
+cobot = "cobot.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ultanio/cobot"
+Documentation = "https://github.com/ultanio/cobot#readme"
+Repository = "https://github.com/ultanio/cobot"
+Issues = "https://github.com/ultanio/cobot/issues"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["cobot*"]
+exclude = ["tests*", "memory*", "skills*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"

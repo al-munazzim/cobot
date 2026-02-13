@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120">
+  <defs>
+    <linearGradient id="amber" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#f0a500"/>
+      <stop offset="100%" style="stop-color:#f7931a"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="400" height="120" rx="12" fill="#0d0f14"/>
+  <rect x="2" y="2" width="396" height="116" rx="10" fill="none" stroke="#1e2130" stroke-width="2"/>
+  
+  <!-- Terminal prompt -->
+  <text x="24" y="72" font-family="'JetBrains Mono', 'SF Mono', 'Fira Code', monospace" font-size="42" font-weight="500" fill="#555b72">$</text>
+  
+  <!-- Cobot text -->
+  <text x="60" y="72" font-family="'JetBrains Mono', 'SF Mono', 'Fira Code', monospace" font-size="42" font-weight="700" fill="#e8eaf0">cobot</text>
+  
+  <!-- Cursor -->
+  <rect x="208" y="38" width="4" height="42" fill="url(#amber)">
+    <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/>
+  </rect>
+  
+  <!-- Lightning icon -->
+  <g transform="translate(240, 32)">
+    <path d="M20 0 L8 24 L16 24 L4 48 L28 18 L18 18 L28 0 Z" fill="url(#amber)" opacity="0.9"/>
+  </g>
+  
+  <!-- Key icon (Nostr) -->
+  <g transform="translate(290, 42)">
+    <circle cx="14" cy="14" r="10" fill="none" stroke="#8b5cf6" stroke-width="3"/>
+    <rect x="22" y="10" width="28" height="8" rx="2" fill="#8b5cf6"/>
+    <rect x="38" y="14" width="4" height="10" rx="1" fill="#8b5cf6"/>
+    <rect x="46" y="14" width="4" height="7" rx="1" fill="#8b5cf6"/>
+  </g>
+</svg>
