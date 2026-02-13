@@ -57,7 +57,18 @@ class LoggerPlugin(Plugin):
 
     def on_before_llm_call(self, ctx: dict) -> dict:
         model = ctx.get("model", "")
-        self._log("debug", "llm_call", f"Calling {model}")
+        messages = ctx.get("messages", [])
+        
+        # Log message count and system prompt preview
+        sys_prompt = ""
+        for m in messages:
+            if m.get("role") == "system":
+                sys_prompt = m.get("content", "")[:200]
+                break
+        
+        self._log("debug", "llm_call", f"Calling {model} ({len(messages)} msgs)")
+        if sys_prompt:
+            self._log("debug", "llm_call", f"System: {sys_prompt}...")
         return ctx
 
     def on_after_llm_call(self, ctx: dict) -> dict:
