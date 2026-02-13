@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="docs/logo.svg" alt="Cobot Logo" width="200">
+  <img src="docs/logo.svg" alt="Cobot Logo" width="360">
 </p>
-
-<h1 align="center">🤖 Cobot</h1>
 
 <p align="center">
   <strong>Minimal self-sovereign AI agent with Nostr identity and Lightning wallet</strong>

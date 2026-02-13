@@ -1,39 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120">
   <defs>
-    <linearGradient id="amber" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="amber" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" style="stop-color:#f0a500"/>
-      <stop offset="100%" style="stop-color:#c48800"/>
+      <stop offset="100%" style="stop-color:#f7931a"/>
     </linearGradient>
   </defs>
   
-  <!-- Dark background -->
-  <rect width="200" height="200" rx="24" fill="#0d0f14"/>
+  <!-- Background -->
+  <rect width="400" height="120" rx="12" fill="#0d0f14"/>
+  <rect x="2" y="2" width="396" height="116" rx="10" fill="none" stroke="#1e2130" stroke-width="2"/>
   
-  <!-- Border -->
-  <rect x="4" y="4" width="192" height="192" rx="20" fill="none" stroke="#1e2130" stroke-width="2"/>
-  
-  <!-- Terminal prompt style -->
-  <text x="30" y="85" font-family="JetBrains Mono, SF Mono, monospace" font-size="48" font-weight="600" fill="#555b72">$</text>
+  <!-- Terminal prompt -->
+  <text x="24" y="72" font-family="'JetBrains Mono', 'SF Mono', 'Fira Code', monospace" font-size="42" font-weight="500" fill="#555b72">$</text>
   
   <!-- Cobot text -->
-  <text x="70" y="85" font-family="JetBrains Mono, SF Mono, monospace" font-size="42" font-weight="700" fill="#e8eaf0">cobot</text>
+  <text x="60" y="72" font-family="'JetBrains Mono', 'SF Mono', 'Fira Code', monospace" font-size="42" font-weight="700" fill="#e8eaf0">cobot</text>
   
-  <!-- Cursor blink -->
-  <rect x="168" y="58" width="4" height="36" fill="url(#amber)">
-    <animate attributeName="opacity" values="1;0;1" dur="1.2s" repeatCount="indefinite"/>
+  <!-- Cursor -->
+  <rect x="208" y="38" width="4" height="42" fill="url(#amber)">
+    <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite"/>
   </rect>
   
-  <!-- Lightning bolt (small, subtle) -->
-  <path d="M85 110 L78 125 L84 125 L77 142 L92 120 L85 120 L92 110 Z" fill="url(#amber)" opacity="0.9"/>
-  
-  <!-- Key icon (Nostr) -->
-  <g transform="translate(100, 108)">
-    <circle cx="12" cy="12" r="8" fill="none" stroke="#8b5cf6" stroke-width="2.5"/>
-    <rect x="18" y="9" width="20" height="6" rx="1" fill="#8b5cf6"/>
-    <rect x="30" y="12" width="3" height="8" rx="1" fill="#8b5cf6"/>
-    <rect x="36" y="12" width="3" height="5" rx="1" fill="#8b5cf6"/>
+  <!-- Lightning icon -->
+  <g transform="translate(240, 32)">
+    <path d="M20 0 L8 24 L16 24 L4 48 L28 18 L18 18 L28 0 Z" fill="url(#amber)" opacity="0.9"/>
   </g>
   
-  <!-- Tagline -->
-  <text x="100" y="170" font-family="JetBrains Mono, SF Mono, monospace" font-size="11" fill="#555b72" text-anchor="middle">self-sovereign agent</text>
+  <!-- Key icon (Nostr) -->
+  <g transform="translate(290, 42)">
+    <circle cx="14" cy="14" r="10" fill="none" stroke="#8b5cf6" stroke-width="3"/>
+    <rect x="22" y="10" width="28" height="8" rx="2" fill="#8b5cf6"/>
+    <rect x="38" y="14" width="4" height="10" rx="1" fill="#8b5cf6"/>
+    <rect x="46" y="14" width="4" height="7" rx="1" fill="#8b5cf6"/>
+  </g>
 </svg>
