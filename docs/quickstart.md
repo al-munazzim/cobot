@@ -53,7 +53,32 @@ Set your API key:
 export PPQ_API_KEY="your-api-key-here"
 ```
 
-## Step 3: Run
+## Step 3: Set Up User Authorization (Optional)
+
+If you're exposing your bot on Telegram or other channels, configure pairing to control who can interact:
+
+```yaml
+# In cobot.yml
+pairing:
+  enabled: true
+  owner_ids:
+    telegram: ["your-telegram-user-id"]
+  # skip_channels: ["nostr"]  # Optional: skip auth for specific channels
+```
+
+Unknown users will receive a pairing code. Approve them with:
+
+```bash
+cobot pairing approve <code>
+```
+
+See all pending/approved users:
+
+```bash
+cobot pairing list
+```
+
+## Step 4: Run
 
 ```bash
 # Interactive mode (recommended for first run)
@@ -79,7 +104,7 @@ Try sending a message:
 > Hello! What can you do?
 ```
 
-## Step 4: Explore
+## Step 5: Explore
 
 ### Check Status
 
