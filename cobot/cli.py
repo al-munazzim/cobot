@@ -425,8 +425,228 @@ def run_tests(verbose: bool):
     subprocess.run(cmd)
 
 
+def register_plugin_commands():
+    """Load plugins and let them register CLI commands."""
+    try:
+        from cobot.plugins import init_plugins, get_registry
+
+        # Try to initialize plugins (may fail if no config)
+        try:
+            init_plugins()
+        except Exception:
+            pass  # Config may not exist yet
+
+        registry = get_registry()
+        if registry:
+            for plugin in registry.all_plugins():
+                try:
+                    plugin.register_commands(cli)
+                except Exception as e:
+                    # Don't fail CLI if plugin command registration fails
+                    click.echo(
+                        f"Warning: Plugin {plugin.meta.id} command registration failed: {e}",
+                        err=True,
+                    )
+    except Exception:
+        pass  # Plugins not available
+
+
+# --- Setup Wizard (Core) ---
+
+
+@cli.group()
+def wizard():
+    """Setup wizard and plugin configuration."""
+    pass
+
+
+@wizard.command()
+@click.option(
+    "--non-interactive", "-y", is_flag=True, help="Use defaults, don't prompt"
+)
+def init(non_interactive: bool):
+    """Initialize cobot configuration.
+
+    Interactive wizard to set up cobot.yml with plugins and credentials.
+    Plugins can extend the wizard via wizard_section() and wizard_configure().
+    """
+    import yaml
+
+    config_path = Path("cobot.yml")
+
+    if config_path.exists() and not non_interactive:
+        if not click.confirm("cobot.yml already exists. Overwrite?"):
+            click.echo("Aborted.")
+            return
+
+    click.echo("\n🤖 Cobot Setup Wizard\n")
+
+    # --- Core Configuration (always present) ---
+
+    config = {
+        "provider": "ppq",
+        "identity": {"name": "MyAgent"},
+    }
+
+    if non_interactive:
+        # Use defaults for core config
+        config["ppq"] = {
+            "api_base": "https://api.ppq.ai/v1",
+            "api_key": "${PPQ_API_KEY}",
+            "model": "gpt-4o",
+        }
+        config["exec"] = {"enabled": True, "timeout": 30}
+    else:
+        # Interactive core setup
+
+        # Identity
+        click.echo("📛 Identity\n")
+        name = click.prompt("Agent name", default="MyAgent")
+        config["identity"]["name"] = name
+
+        # Provider
+        click.echo("\n🧠 LLM Provider\n")
+        provider = click.prompt(
+            "Provider", type=click.Choice(["ppq", "ollama"]), default="ppq"
+        )
+        config["provider"] = provider
+
+        if provider == "ppq":
+            click.echo("\n  PPQ Configuration (api.ppq.ai)")
+            api_key = click.prompt(
+                "  API key (or use env var)",
+                default="${PPQ_API_KEY}",
+                show_default=True,
+            )
+            model = click.prompt("  Model", default="gpt-4o")
+            config["ppq"] = {
+                "api_base": "https://api.ppq.ai/v1",
+                "api_key": api_key,
+                "model": model,
+            }
+        else:
+            click.echo("\n  Ollama Configuration (local)")
+            base_url = click.prompt("  URL", default="http://localhost:11434")
+            model = click.prompt("  Model", default="qwen2.5:7b")
+            config["ollama"] = {
+                "base_url": base_url,
+                "model": model,
+            }
+
+        # Tool execution
+        click.echo("\n🔧 Tool Execution\n")
+        exec_enabled = click.confirm("Enable shell command execution?", default=True)
+        config["exec"] = {
+            "enabled": exec_enabled,
+            "timeout": 30,
+        }
+
+    # --- Plugin Configuration (via extension points) ---
+
+    if not non_interactive:
+        try:
+            from cobot.plugins import get_registry
+
+            registry = get_registry()
+            if registry:
+                wizard_plugins = []
+
+                # Discover plugins that participate in wizard
+                for plugin in registry.all_plugins():
+                    try:
+                        section = plugin.wizard_section()
+                        if section:
+                            wizard_plugins.append((plugin, section))
+                    except Exception:
+                        pass
+
+                if wizard_plugins:
+                    click.echo("\n🔌 Plugins\n")
+
+                    for plugin, section in wizard_plugins:
+                        key = section.get("key", plugin.meta.id)
+                        name = section.get("name", plugin.meta.id)
+                        desc = section.get("description", "")
+
+                        prompt_text = f"Configure {name}?"
+                        if desc:
+                            prompt_text = f"Configure {name} ({desc})?"
+
+                        if click.confirm(prompt_text, default=False):
+                            try:
+                                plugin_config = plugin.wizard_configure(config)
+                                if plugin_config:
+                                    config[key] = plugin_config
+                                    click.echo(f"  ✓ {name} configured\n")
+                            except Exception as e:
+                                click.echo(
+                                    f"  ✗ Error configuring {name}: {e}\n", err=True
+                                )
+
+        except Exception:
+            # Plugins not available, skip plugin configuration
+            pass
+
+    # --- Write Configuration ---
+
+    with open(config_path, "w") as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+    click.echo(f"\n✅ Configuration written to {config_path}")
+    click.echo("\nNext steps:")
+    click.echo("  1. Review and edit cobot.yml")
+    click.echo("  2. Set environment variables (PPQ_API_KEY, etc.)")
+    click.echo("  3. Run: cobot run")
+
+
+@wizard.command()
+def plugins():
+    """List available plugins and their wizard sections."""
+    try:
+        from cobot.plugins import init_plugins, get_registry
+
+        try:
+            init_plugins()
+        except Exception as e:
+            click.echo(f"Note: Could not fully initialize plugins: {e}", err=True)
+
+        registry = get_registry()
+        if not registry:
+            click.echo("No plugin registry available.")
+            return
+
+        click.echo("\n📦 Plugins:\n")
+
+        for plugin in registry.all_plugins():
+            meta = plugin.meta
+            caps = ", ".join(meta.capabilities) if meta.capabilities else "none"
+            click.echo(f"  {meta.id} v{meta.version}")
+            click.echo(f"    Capabilities: {caps}")
+            if meta.extension_points:
+                click.echo(f"    Extension points: {', '.join(meta.extension_points)}")
+
+            # Show wizard section if available
+            try:
+                section = plugin.wizard_section()
+                if section:
+                    name = section.get("name", meta.id)
+                    desc = section.get("description", "")
+                    click.echo(f"    Wizard: {name}" + (f" - {desc}" if desc else ""))
+            except Exception:
+                pass
+
+            click.echo()
+
+    except Exception as e:
+        click.echo(f"Error listing plugins: {e}", err=True)
+
+
 def main():
     """Entry point."""
+    # Let plugins register their commands
+    register_plugin_commands()
+
+    # Run CLI
     cli()
 
 
