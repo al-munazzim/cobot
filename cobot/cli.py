@@ -97,11 +97,19 @@ def run(config: Optional[str], stdin: bool, plugins: Optional[str]):
     try:
         from cobot import plugins as plugin_system
         from cobot.agent import Cobot
+        import yaml
 
-        # Load plugins first
+        # Load config file first (for plugin filtering)
+        config_path = Path(config) if config else Path("cobot.yml")
+        raw_config = {}
+        if config_path.exists():
+            with open(config_path) as f:
+                raw_config = yaml.safe_load(f) or {}
+
+        # Load plugins with config
         plugins_dir = Path(plugins) if plugins else Path("cobot/plugins")
         if plugins_dir.exists():
-            registry = plugin_system.init_plugins(plugins_dir)
+            registry = plugin_system.init_plugins(plugins_dir, config=raw_config)
             click.echo(f"Loaded {registry} plugin(s)", err=True)
         else:
             registry = plugin_system.get_registry()
@@ -492,8 +500,8 @@ def init(non_interactive: bool):
         # Use defaults for core config
         config["ppq"] = {
             "api_base": "https://api.ppq.ai/v1",
-            "api_key": "${PPQ_API_KEY}",
-            "model": "gpt-4o",
+            # api_key from PPQ_API_KEY env var
+            "model": "openai/gpt-4o",
         }
         config["exec"] = {"enabled": True, "timeout": 30}
     else:
@@ -518,12 +526,14 @@ def init(non_interactive: bool):
                 default="${PPQ_API_KEY}",
                 show_default=True,
             )
-            model = click.prompt("  Model", default="gpt-4o")
+            model = click.prompt("  Model", default="openai/gpt-4o")
             config["ppq"] = {
                 "api_base": "https://api.ppq.ai/v1",
-                "api_key": api_key,
+                # Note: ${VAR} doesn't expand in YAML - use env var directly or set value
                 "model": model,
             }
+            if api_key != "${PPQ_API_KEY}":
+                config["ppq"]["api_key"] = api_key
         else:
             click.echo("\n  Ollama Configuration (local)")
             base_url = click.prompt("  URL", default="http://localhost:11434")
