@@ -35,16 +35,16 @@ class WorkspacePlugin(Plugin):
         """Resolve workspace path with priority: CLI > env > config > default."""
         # Priority 1: CLI argument (passed as _cli_workspace)
         cli_workspace = config.get("_cli_workspace")
-        
+
         # Priority 2: Environment variable
         env_workspace = os.environ.get("COBOT_WORKSPACE")
-        
+
         # Priority 3: Config file
         config_workspace = config.get("workspace")
-        
+
         # Priority 4: Default
         default_workspace = Path.home() / ".cobot" / "workspace"
-        
+
         # Resolve with priority
         workspace_str = cli_workspace or env_workspace or config_workspace
         if workspace_str:
@@ -55,12 +55,12 @@ class WorkspacePlugin(Plugin):
     def start(self) -> None:
         """Create workspace directories if missing."""
         self._workspace.mkdir(parents=True, exist_ok=True)
-        
+
         # Create standard subdirectories
         subdirs = ["memory", "skills", "plugins", "logs"]
         for subdir in subdirs:
             (self._workspace / subdir).mkdir(exist_ok=True)
-        
+
         print(f"[Workspace] {self._workspace}", file=sys.stderr)
 
     def stop(self) -> None:
@@ -69,13 +69,13 @@ class WorkspacePlugin(Plugin):
 
     def get_path(self, *parts: str) -> Path:
         """Get a path within the workspace.
-        
+
         Args:
             *parts: Path components relative to workspace root
-            
+
         Returns:
             Full path within workspace
-            
+
         Examples:
             get_path() -> /home/user/.cobot/workspace
             get_path("memory") -> /home/user/.cobot/workspace/memory

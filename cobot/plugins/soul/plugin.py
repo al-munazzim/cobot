@@ -46,7 +46,7 @@ class SoulPlugin(Plugin):
                     self._workspace_path = workspace.get_path()
             except Exception:
                 pass
-        
+
         soul_path = self._workspace_path / "SOUL.md"
         if soul_path.exists():
             self._soul = soul_path.read_text()
@@ -60,7 +60,7 @@ class SoulPlugin(Plugin):
 
     def get_soul(self) -> str:
         """Get the soul/persona content.
-        
+
         Returns:
             Content of SOUL.md or empty string if not found.
         """

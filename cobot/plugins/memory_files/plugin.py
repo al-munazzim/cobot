@@ -48,7 +48,7 @@ class MemoryFilesPlugin(Plugin):
                     self._files_dir = workspace.get_path("memory", "files")
             except Exception:
                 pass
-        
+
         # Ensure directory exists
         self._files_dir.mkdir(parents=True, exist_ok=True)
         print(f"[Memory-Files] {self._files_dir}", file=sys.stderr)
@@ -59,7 +59,7 @@ class MemoryFilesPlugin(Plugin):
 
     def store(self, key: str, content: str) -> None:
         """Store content as a .md file.
-        
+
         Args:
             key: Filename (without extension)
             content: Content to store
@@ -69,10 +69,10 @@ class MemoryFilesPlugin(Plugin):
 
     def retrieve(self, key: str) -> str:
         """Retrieve content from a .md file.
-        
+
         Args:
             key: Filename (without extension)
-            
+
         Returns:
             Content or empty string if not found
         """
@@ -83,37 +83,39 @@ class MemoryFilesPlugin(Plugin):
 
     def search(self, query: str) -> list[dict]:
         """Search file contents for query.
-        
+
         Simple keyword search - looks for query in file contents.
-        
+
         Args:
             query: Search string
-            
+
         Returns:
             List of matches: [{"key": "filename", "content": "...", "score": 1.0}]
         """
         results = []
         query_lower = query.lower()
-        
+
         for filepath in self._files_dir.glob("*.md"):
             try:
                 content = filepath.read_text()
                 if query_lower in content.lower():
                     # Simple scoring: count occurrences
                     occurrences = content.lower().count(query_lower)
-                    results.append({
-                        "key": filepath.stem,
-                        "content": content[:500],  # Truncate for preview
-                        "score": min(1.0, occurrences / 10),  # Normalize score
-                    })
+                    results.append(
+                        {
+                            "key": filepath.stem,
+                            "content": content[:500],  # Truncate for preview
+                            "score": min(1.0, occurrences / 10),  # Normalize score
+                        }
+                    )
             except Exception:
                 pass
-        
+
         return results
 
     def list_keys(self) -> list[str]:
         """List all stored memory keys.
-        
+
         Returns:
             List of keys (filenames without .md)
         """

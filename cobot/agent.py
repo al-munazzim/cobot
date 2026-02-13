@@ -14,11 +14,12 @@ from cobot.plugins import (
     init_plugins,
     run,
     LLMProvider,
-    CommunicationProvider,
+    CommunicationProvider,  # Legacy interface, kept for compatibility
     ToolProvider,
     LLMError,
     CommunicationError,
 )
+from cobot.plugins.communication import OutgoingMessage
 
 
 class Cobot:
@@ -49,9 +50,9 @@ class Cobot:
         """Get LLM provider from registry."""
         return self.registry.get_by_capability("llm")
 
-    def _get_communication(self) -> Optional[CommunicationProvider]:
-        """Get communication provider from registry."""
-        return self.registry.get_by_capability("communication")
+    def _get_comm(self):
+        """Get communication plugin for channel messaging."""
+        return self.registry.get("communication")
 
     def _get_tools(self) -> Optional[ToolProvider]:
         """Get tools provider from registry."""
@@ -152,7 +153,9 @@ class Cobot:
                 for tool_call in response.tool_calls:
                     tool_name = tool_call["function"]["name"]
                     raw_args = tool_call["function"]["arguments"]
-                    tool_args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                    tool_args = (
+                        json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                    )
                     tool_id = tool_call["id"]
 
                     # Hook: on_before_tool_exec
@@ -203,11 +206,17 @@ class Cobot:
             return f"Error: {e}"
 
     def handle_message(self, msg) -> None:
-        """Handle an incoming message."""
-        if msg.id in self._processed_events:
+        """Handle an incoming message.
+
+        Args:
+            msg: IncomingMessage from session plugin
+        """
+        # Deduplicate by message ID
+        msg_key = f"{msg.channel_type}:{msg.channel_id}:{msg.id}"
+        if msg_key in self._processed_events:
             return
 
-        self._processed_events.add(msg.id)
+        self._processed_events.add(msg_key)
         if len(self._processed_events) > 1000:
             self._processed_events = set(list(self._processed_events)[500:])
 
@@ -216,37 +225,50 @@ class Cobot:
             "on_message_received",
             {
                 "message": msg.content,
-                "sender": msg.sender,
+                "sender": msg.sender_name,
+                "sender_id": msg.sender_id,
+                "channel_type": msg.channel_type,
+                "channel_id": msg.channel_id,
                 "event_id": msg.id,
             },
         )
         if ctx.get("abort"):
             return
 
+        # Show typing indicator
+        comm = self._get_comm()
+        if comm:
+            comm.typing(msg.channel_type, msg.channel_id)
+
         message = ctx.get("message", msg.content)
-        response_text = self.respond(message, sender=msg.sender)
+        response_text = self.respond(message, sender=msg.sender_name)
 
         # Hook: on_before_send
-        ctx = run("on_before_send", {"text": response_text, "recipient": msg.sender})
+        ctx = run("on_before_send", {"text": response_text, "recipient": msg.sender_name})
         if ctx.get("abort"):
             return
         response_text = ctx.get("text", response_text)
 
-        # Send response
-        comm = self._get_communication()
+        # Send response via communication plugin
         if comm:
-            try:
-                event_id = comm.send(msg.sender, response_text)
+            success = comm.send(OutgoingMessage(
+                channel_type=msg.channel_type,
+                channel_id=msg.channel_id,
+                content=response_text,
+                reply_to=msg.id,
+            ))
+            if success:
                 run(
                     "on_after_send",
                     {
                         "text": response_text,
-                        "recipient": msg.sender,
-                        "event_id": event_id,
+                        "recipient": msg.sender_name,
+                        "channel_type": msg.channel_type,
+                        "channel_id": msg.channel_id,
                     },
                 )
-            except CommunicationError as e:
-                run("on_error", {"error": e, "hook": "send"})
+            else:
+                run("on_error", {"error": "Send failed", "hook": "send"})
 
         # Check restart
         tools = self._get_tools()
@@ -254,32 +276,29 @@ class Cobot:
             self._do_restart()
 
     def poll(self) -> int:
-        """Poll for new messages."""
-        comm = self._get_communication()
+        """Poll for new messages from all channels."""
+        comm = self._get_comm()
         if not comm:
             return 0
 
         try:
-            messages = comm.receive(since_minutes=5)
+            messages = comm.poll()
             for msg in messages:
                 self.handle_message(msg)
             return len(messages)
-        except CommunicationError as e:
+        except Exception as e:
             run("on_error", {"error": e, "hook": "poll"})
             return 0
 
     def run_loop(self):
         """Run the main agent loop."""
-        comm = self._get_communication()
+        comm = self._get_comm()
         if comm:
-            try:
-                identity = comm.get_identity()
-                print(
-                    f"Identity: {identity.get('npub', 'unknown')[:40]}...",
-                    file=sys.stderr,
-                )
-            except Exception:
-                pass
+            channels = comm.get_channels()
+            if channels:
+                print(f"Channels: {', '.join(channels)}", file=sys.stderr)
+            else:
+                print("Warning: No channels registered", file=sys.stderr)
 
         interval = 30
         if self._config:
