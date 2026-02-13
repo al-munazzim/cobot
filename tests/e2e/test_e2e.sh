@@ -98,5 +98,49 @@ else
     echo "⏭️ Skipping tool test (no PPQ_API_KEY)"
 fi
 
+# 7. Memory plugin
+echo ""
+echo "🧠 Test: Memory plugin"
+cd "$TEST_DIR"
+
+# Create workspace structure
+mkdir -p memory/files
+
+# Store a memory via CLI (need to test this works)
+# For now, test via Python directly
+python3 << 'PYTEST'
+import sys
+sys.path.insert(0, '.')
+
+from cobot.plugins.memory_files import create_plugin as create_files
+from cobot.plugins.memory import create_plugin as create_memory
+
+# Test memory-files directly
+files = create_files()
+files.configure({"_workspace_path": "."})
+files.start()
+
+# Store
+files.store("test_note", "Meeting about Project Alpha on Tuesday")
+
+# Retrieve
+content = files.retrieve("test_note")
+assert content == "Meeting about Project Alpha on Tuesday", f"Got: {content}"
+
+# Search
+results = files.search("Alpha")
+assert len(results) == 1, f"Expected 1 result, got {len(results)}"
+assert "Alpha" in results[0]["content"]
+
+print("Memory tests passed!")
+PYTEST
+
+if [ $? -eq 0 ]; then
+    echo "✅ Memory plugin works"
+else
+    echo "❌ Memory plugin failed"
+    exit 1
+fi
+
 echo ""
 echo "=== E2E Tests Complete ==="
