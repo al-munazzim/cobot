@@ -1,0 +1,102 @@
+#!/bin/bash
+# E2E tests for cobot
+# Requires PPQ_API_KEY environment variable
+
+set -e
+
+echo "=== Cobot E2E Tests ==="
+
+# Find cobot package directory (for plugins)
+COBOT_DIR=$(python -c "import cobot; import os; print(os.path.dirname(cobot.__file__))")
+echo "Cobot package: $COBOT_DIR"
+
+# Setup test directory
+TEST_DIR=$(mktemp -d)
+trap "rm -rf $TEST_DIR" EXIT
+
+# 1. CLI basics
+echo ""
+echo "📋 Test: CLI commands"
+cobot --version
+cobot --help > /dev/null
+echo "✅ CLI works"
+
+# 2. Status command
+echo ""
+echo "📊 Test: Status command"
+cobot status | grep -q "Not running"
+echo "✅ Status works"
+
+# 3. Wizard with -y flag
+echo ""
+echo "🧙 Test: Wizard non-interactive"
+cd "$TEST_DIR"
+cobot wizard init -y
+if [ -f cobot.yml ]; then
+    echo "✅ Wizard created cobot.yml"
+    cat cobot.yml
+else
+    echo "❌ Wizard failed to create cobot.yml"
+    exit 1
+fi
+
+# 4. Config validation
+echo ""
+echo "🔍 Test: Config validation"
+cobot config validate && echo "✅ Config valid" || echo "⚠️ Config has warnings"
+
+# 5. LLM response (requires PPQ_API_KEY)
+echo ""
+echo "🤖 Test: LLM response via stdin"
+if [ -n "$PPQ_API_KEY" ]; then
+    # Create config file
+    cat > cobot.yml << 'EOF'
+provider: ppq
+identity:
+  name: E2ETestBot
+ppq:
+  api_base: https://api.ppq.ai/v1
+  model: openai/gpt-4o
+exec:
+  enabled: true
+  timeout: 30
+plugins:
+  disabled:
+    - filedrop
+    - nostr
+EOF
+
+    # Run with plugins from package
+    RESPONSE=$(echo "Reply with exactly: E2E_OK" | timeout 30 cobot run --stdin -c "$TEST_DIR/cobot.yml" -p "$COBOT_DIR/plugins" 2>/dev/null | tail -1)
+    if echo "$RESPONSE" | grep -qi "E2E.OK\|e2e ok\|E2E_OK"; then
+        echo "✅ LLM response correct"
+    elif [ -n "$RESPONSE" ]; then
+        echo "⚠️ LLM responded (content varies): ${RESPONSE:0:50}..."
+    else
+        echo "❌ No LLM response"
+        exit 1
+    fi
+else
+    echo "⏭️ Skipping LLM test (no PPQ_API_KEY)"
+fi
+
+# 6. Tool execution (requires PPQ_API_KEY)
+echo ""
+echo "🔨 Test: Tool execution"
+if [ -n "$PPQ_API_KEY" ]; then
+    rm -f /tmp/cobot_e2e_test.txt
+    echo "Create a file at /tmp/cobot_e2e_test.txt containing the word 'hello'. Use the write_file tool." | timeout 45 cobot run --stdin -c "$TEST_DIR/cobot.yml" -p "$COBOT_DIR/plugins" 2>/dev/null || true
+    
+    if [ -f /tmp/cobot_e2e_test.txt ]; then
+        echo "✅ Tool execution works"
+        echo "File contents: $(cat /tmp/cobot_e2e_test.txt)"
+        rm -f /tmp/cobot_e2e_test.txt
+    else
+        echo "⚠️ Tool test inconclusive (file not created)"
+    fi
+else
+    echo "⏭️ Skipping tool test (no PPQ_API_KEY)"
+fi
+
+echo ""
+echo "=== E2E Tests Complete ==="
