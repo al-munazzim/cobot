@@ -1,104 +1,121 @@
-"""Memory plugin - conversation history storage.
+"""Memory plugin - defines extension points for memory storage.
 
-Stores and retrieves conversation history from workspace/memory/.
-Implements context.history extension point.
+This plugin defines the memory extension points that different
+storage backends can implement (files, vector DB, etc.)
 
-Priority: 16 (after workspace, before context)
+It also provides a "super tool" that aggregates results from
+all implementations.
+
+Priority: 12 (after workspace, before implementations)
 """
 
 import sys
-from pathlib import Path
+from typing import Optional
 
 from ..base import Plugin, PluginMeta
 
 
 class MemoryPlugin(Plugin):
-    """Memory storage plugin - persists conversations."""
+    """Memory extension point definer and aggregator."""
 
     meta = PluginMeta(
         id="memory",
         version="1.0.0",
         dependencies=["workspace"],
-        implements={
-            "context.history": "get_history",
-        },
-        priority=16,
+        extension_points=[
+            "memory.store",     # Store a memory: store(key, content) -> None
+            "memory.retrieve",  # Retrieve by key: retrieve(key) -> str
+            "memory.search",    # Search memories: search(query) -> list[dict]
+        ],
+        priority=12,
     )
 
     def __init__(self):
-        self._workspace_path: Path = Path(".")
-        self._memory_dir: Path = Path(".")
         self._registry = None
 
     def configure(self, config: dict) -> None:
-        """Get workspace path from config."""
-        if "_workspace_path" in config:
-            self._workspace_path = Path(config["_workspace_path"])
-            self._memory_dir = self._workspace_path / "memory"
+        """Store configuration."""
+        self._config = config
 
     def start(self) -> None:
-        """Initialize memory directory."""
-        # Try to get workspace from registry if available
-        if self._registry:
-            try:
-                workspace = self._registry.get_plugin("workspace")
-                if workspace:
-                    self._workspace_path = workspace.get_path()
-                    self._memory_dir = workspace.get_path("memory")
-            except Exception:
-                pass
-        
-        # Ensure memory directory exists
-        self._memory_dir.mkdir(parents=True, exist_ok=True)
-        print(f"[Memory] {self._memory_dir}", file=sys.stderr)
+        """Initialize memory aggregator."""
+        print("[Memory] Ready (extension point definer)", file=sys.stderr)
 
     def stop(self) -> None:
         """Nothing to clean up."""
         pass
 
     def store(self, key: str, content: str) -> None:
-        """Store content in memory.
+        """Store content using all implementations.
+        
+        Calls all plugins that implement memory.store.
         
         Args:
-            key: Identifier for the memory (becomes filename)
+            key: Identifier for the memory
             content: Content to store
         """
-        filepath = self._memory_dir / f"{key}.md"
-        filepath.write_text(content)
+        if not self._registry:
+            return
+        
+        for plugin_id, plugin, method_name in self._registry.get_implementations("memory.store"):
+            try:
+                method = getattr(plugin, method_name)
+                method(key, content)
+            except Exception as e:
+                print(f"[Memory] Error storing via {plugin_id}: {e}", file=sys.stderr)
 
-    def retrieve(self, key: str) -> str:
-        """Retrieve content from memory.
+    def retrieve(self, key: str) -> Optional[str]:
+        """Retrieve content from first implementation that has it.
         
         Args:
             key: Identifier for the memory
             
         Returns:
-            Content or empty string if not found
+            Content or None if not found
         """
-        filepath = self._memory_dir / f"{key}.md"
-        if filepath.exists():
-            return filepath.read_text()
-        return ""
+        if not self._registry:
+            return None
+        
+        for plugin_id, plugin, method_name in self._registry.get_implementations("memory.retrieve"):
+            try:
+                method = getattr(plugin, method_name)
+                result = method(key)
+                if result:
+                    return result
+            except Exception as e:
+                print(f"[Memory] Error retrieving via {plugin_id}: {e}", file=sys.stderr)
+        
+        return None
 
-    def list_memories(self) -> list[str]:
-        """List all memory keys.
+    def search(self, query: str) -> list[dict]:
+        """Search across all memory implementations.
         
+        Aggregates results from all plugins that implement memory.search.
+        
+        Args:
+            query: Search query
+            
         Returns:
-            List of memory keys (filenames without .md)
+            List of results: [{"source": "plugin-id", "key": "...", "content": "...", "score": 0.9}]
         """
-        return [f.stem for f in self._memory_dir.glob("*.md")]
-
-    def get_history(self) -> list[dict]:
-        """Get conversation history for context.
+        results = []
         
-        Implements context.history extension point.
+        if not self._registry:
+            return results
         
-        Returns:
-            List of message dicts from recent memory.
-        """
-        # For now, return empty - can be expanded to parse memory files
-        # and return relevant history
-        return []
+        for plugin_id, plugin, method_name in self._registry.get_implementations("memory.search"):
+            try:
+                method = getattr(plugin, method_name)
+                impl_results = method(query)
+                for r in impl_results:
+                    r["source"] = plugin_id
+                results.extend(impl_results)
+            except Exception as e:
+                print(f"[Memory] Error searching via {plugin_id}: {e}", file=sys.stderr)
+        
+        # Sort by score if available
+        results.sort(key=lambda r: r.get("score", 0), reverse=True)
+        return results
 
 
 def create_plugin() -> MemoryPlugin:
