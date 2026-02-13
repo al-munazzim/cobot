@@ -1,5 +1,6 @@
 """Tests for plugin system (registry, base, interfaces)."""
 
+import asyncio
 import pytest
 
 from cobot.plugins import (
@@ -44,10 +45,10 @@ class DummyPlugin(Plugin):
         self.configured = True
         self.config_received = config
 
-    def start(self) -> None:
+    async def start(self) -> None:
         self.started = True
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         self.stopped = True
 
 
@@ -65,10 +66,10 @@ class HighPriorityPlugin(Plugin):
     def configure(self, config: dict) -> None:
         pass
 
-    def start(self) -> None:
+    async def start(self) -> None:
         pass
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         pass
 
 
@@ -86,10 +87,10 @@ class LowPriorityPlugin(Plugin):
     def configure(self, config: dict) -> None:
         pass
 
-    def start(self) -> None:
+    async def start(self) -> None:
         pass
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         pass
 
 
@@ -107,10 +108,10 @@ class DummyLLMPlugin(Plugin, LLMProvider):
     def configure(self, config: dict) -> None:
         pass
 
-    def start(self) -> None:
+    async def start(self) -> None:
         pass
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         pass
 
     def chat(self, messages, tools=None, model=None, max_tokens=2048):
@@ -220,7 +221,7 @@ class TestPluginRegistry:
         registry.register(DummyPlugin)
         registry.configure_all({})
 
-        registry.start_all()
+        asyncio.run(registry.start_all())
 
         plugin = registry.get("dummy")
         assert plugin.started is True
@@ -229,9 +230,9 @@ class TestPluginRegistry:
         registry = PluginRegistry()
         registry.register(DummyPlugin)
         registry.configure_all({})
-        registry.start_all()
+        asyncio.run(registry.start_all())
 
-        registry.stop_all()
+        asyncio.run(registry.stop_all())
 
         plugin = registry.get("dummy")
         assert plugin.stopped is True
@@ -331,9 +332,9 @@ class TestRunHook:
         reset_registry()
 
     def test_run_returns_context(self):
-        result = run("test_hook", {"value": 42})
+        result = asyncio.run(run("test_hook", {"value": 42}))
         assert result["value"] == 42
 
     def test_run_nonexistent_hook(self):
-        result = run("nonexistent", {"value": 1})
+        result = asyncio.run(run("nonexistent", {"value": 1}))
         assert result["value"] == 1  # Returns context unchanged

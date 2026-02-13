@@ -51,14 +51,14 @@ class SessionPlugin(Plugin):
         self._config = config
         self._default_channel = config.get("default_channel")
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Initialize session orchestrator."""
         if self._registry is None:
             self._registry = get_registry()
         print("[Session] Starting session orchestrator", file=sys.stderr)
         self._log_channels()
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 

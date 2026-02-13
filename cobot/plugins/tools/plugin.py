@@ -172,14 +172,14 @@ class ToolsPlugin(Plugin, ToolProvider):
         self._exec_blocklist = exec_config.get("blocklist", [])
         self._exec_timeout = exec_config.get("timeout", 30)
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Tools plugin is ready."""
         print(
             f"[Tools] Initialized, exec={'enabled' if self._exec_enabled else 'disabled'}",
             file=sys.stderr,
         )
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 

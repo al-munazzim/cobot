@@ -1,5 +1,6 @@
 """Tests for soul plugin."""
 
+import asyncio
 import tempfile
 from pathlib import Path
 
@@ -21,7 +22,7 @@ class TestSoulPlugin:
 
             # Mock workspace path
             plugin.configure({"_workspace_path": tmpdir})
-            plugin.start()
+            asyncio.run(plugin.start())
 
             assert plugin.get_soul() == soul_content
 
@@ -31,7 +32,7 @@ class TestSoulPlugin:
 
         with tempfile.TemporaryDirectory() as tmpdir:
             plugin.configure({"_workspace_path": tmpdir})
-            plugin.start()
+            asyncio.run(plugin.start())
 
             assert plugin.get_soul() == ""
 

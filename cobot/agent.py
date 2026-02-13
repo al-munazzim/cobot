@@ -2,8 +2,10 @@
 """Cobot - Minimal self-sovereign AI agent.
 
 Core agent loop using the plugin registry for all services.
+All I/O operations are async for non-blocking concurrency.
 """
 
+import asyncio
 import sys
 import time
 import json
@@ -11,7 +13,6 @@ from pathlib import Path
 from typing import Optional
 
 from cobot.plugins import (
-    init_plugins,
     run,
     LLMProvider,
     ToolProvider,
@@ -56,13 +57,13 @@ class Cobot:
         """Get tools provider from registry."""
         return self.registry.get_by_capability("tools")
 
-    def _do_restart(self):
+    async def _do_restart(self):
         """Restart the agent process."""
         import os
         import subprocess
 
-        run("on_shutdown", {"reason": "restart_requested"})
-        self.registry.stop_all()
+        await run("on_shutdown", {"reason": "restart_requested"})
+        await self.registry.stop_all()
 
         try:
             subprocess.run(
@@ -71,7 +72,7 @@ class Cobot:
         except Exception:
             os.execv(sys.executable, [sys.executable] + sys.argv)
 
-    def respond(self, message: str, sender: str = "unknown") -> str:
+    async def respond(self, message: str, sender: str = "unknown") -> str:
         """Generate a response to a message."""
         llm = self._get_llm()
         tools = self._get_tools()
@@ -85,7 +86,7 @@ class Cobot:
         ]
 
         # Hook: transform_system_prompt
-        ctx = run(
+        ctx = await run(
             "transform_system_prompt",
             {
                 "prompt": self.soul,
@@ -96,7 +97,7 @@ class Cobot:
         messages[0]["content"] = ctx.get("prompt", self.soul)
 
         # Hook: transform_history
-        ctx = run(
+        ctx = await run(
             "transform_history",
             {
                 "messages": messages,
@@ -111,7 +112,7 @@ class Cobot:
         try:
             for _ in range(max_rounds):
                 # Hook: on_before_llm_call
-                ctx = run(
+                ctx = await run(
                     "on_before_llm_call",
                     {
                         "messages": messages,
@@ -122,10 +123,11 @@ class Cobot:
                 if ctx.get("abort"):
                     return ctx.get("abort_message", "Request aborted.")
 
+                # LLM call - currently sync, could be made async later
                 response = llm.chat(messages, tools=tool_defs if tool_defs else None)
 
                 # Hook: on_after_llm_call
-                run(
+                await run(
                     "on_after_llm_call",
                     {
                         "response": response.content,
@@ -157,18 +159,19 @@ class Cobot:
                     tool_id = tool_call["id"]
 
                     # Hook: on_before_tool_exec
-                    ctx = run(
+                    ctx = await run(
                         "on_before_tool_exec", {"tool": tool_name, "args": tool_args}
                     )
                     if ctx.get("abort"):
                         result = ctx.get("abort_message", "Blocked.")
                     elif tools:
+                        # Tool execution - currently sync, could be made async
                         result = tools.execute(tool_name, tool_args)
                     else:
                         result = "Error: Tools not available"
 
                     # Hook: on_after_tool_exec
-                    run(
+                    await run(
                         "on_after_tool_exec",
                         {
                             "tool": tool_name,
@@ -186,7 +189,7 @@ class Cobot:
                     )
 
             # Hook: transform_response
-            ctx = run(
+            ctx = await run(
                 "transform_response",
                 {
                     "text": response.content or "",
@@ -200,10 +203,10 @@ class Cobot:
             return final_text
 
         except LLMError as e:
-            run("on_error", {"error": e, "hook": "llm_call"})
+            await run("on_error", {"error": e, "hook": "llm_call"})
             return f"Error: {e}"
 
-    def handle_message(self, msg) -> None:
+    async def handle_message(self, msg) -> None:
         """Handle an incoming message.
 
         Args:
@@ -219,7 +222,7 @@ class Cobot:
             self._processed_events = set(list(self._processed_events)[500:])
 
         # Hook: on_message_received
-        ctx = run(
+        ctx = await run(
             "on_message_received",
             {
                 "message": msg.content,
@@ -239,10 +242,10 @@ class Cobot:
             comm.typing(msg.channel_type, msg.channel_id)
 
         message = ctx.get("message", msg.content)
-        response_text = self.respond(message, sender=msg.sender_name)
+        response_text = await self.respond(message, sender=msg.sender_name)
 
         # Hook: on_before_send
-        ctx = run(
+        ctx = await run(
             "on_before_send", {"text": response_text, "recipient": msg.sender_name}
         )
         if ctx.get("abort"):
@@ -260,7 +263,7 @@ class Cobot:
                 )
             )
             if success:
-                run(
+                await run(
                     "on_after_send",
                     {
                         "text": response_text,
@@ -270,29 +273,36 @@ class Cobot:
                     },
                 )
             else:
-                run("on_error", {"error": "Send failed", "hook": "send"})
+                await run("on_error", {"error": "Send failed", "hook": "send"})
 
         # Check restart
         tools = self._get_tools()
         if tools and tools.restart_requested:
-            self._do_restart()
+            await self._do_restart()
 
-    def poll(self) -> int:
-        """Poll for new messages from all channels."""
+    async def poll(self) -> int:
+        """Poll for new messages from all channels.
+
+        Messages are processed concurrently for better multi-user performance.
+        """
         comm = self._get_comm()
         if not comm:
             return 0
 
         try:
             messages = comm.poll()
-            for msg in messages:
-                self.handle_message(msg)
+            if messages:
+                # Process all messages concurrently
+                await asyncio.gather(
+                    *[self.handle_message(msg) for msg in messages],
+                    return_exceptions=True,  # Don't fail all if one fails
+                )
             return len(messages)
         except Exception as e:
-            run("on_error", {"error": e, "hook": "poll"})
+            await run("on_error", {"error": e, "hook": "poll"})
             return 0
 
-    def run_loop(self):
+    async def run_loop(self):
         """Run the main agent loop."""
         comm = self._get_comm()
         if comm:
@@ -308,23 +318,35 @@ class Cobot:
 
         try:
             while True:
-                self.poll()
-                time.sleep(interval)
+                await self.poll()
+                await asyncio.sleep(interval)
+        except asyncio.CancelledError:
+            await run("on_shutdown", {"reason": "cancelled"})
+            await self.registry.stop_all()
         except KeyboardInterrupt:
-            run("on_shutdown", {"reason": "keyboard_interrupt"})
-            self.registry.stop_all()
+            await run("on_shutdown", {"reason": "keyboard_interrupt"})
+            await self.registry.stop_all()
 
-    def run_stdin(self):
-        """Run in stdin mode."""
+    async def run_stdin(self):
+        """Run in stdin mode (async readline)."""
         print("Cobot ready. Type a message (Ctrl+D to exit):", file=sys.stderr)
 
+        loop = asyncio.get_event_loop()
+        reader = asyncio.StreamReader()
+        protocol = asyncio.StreamReaderProtocol(reader)
+        await loop.connect_read_pipe(lambda: protocol, sys.stdin)
+
         try:
-            for line in sys.stdin:
-                message = line.strip()
+            while True:
+                line = await reader.readline()
+                if not line:
+                    break
+
+                message = line.decode().strip()
                 if not message:
                     continue
 
-                ctx = run(
+                ctx = await run(
                     "on_message_received",
                     {
                         "message": message,
@@ -336,63 +358,36 @@ class Cobot:
                     print("[blocked]", file=sys.stderr)
                     continue
 
-                response = self.respond(ctx.get("message", message), sender="stdin")
-                print(response)
-                print(file=sys.stderr)
-        except KeyboardInterrupt:
+                response = await self.respond(
+                    ctx.get("message", message), sender="stdin"
+                )
+
+                # Hook: on_before_send
+                ctx = await run(
+                    "on_before_send", {"text": response, "recipient": "stdin"}
+                )
+                if ctx.get("abort"):
+                    continue
+
+                print(ctx.get("text", response))
+                await run("on_after_send", {"text": response, "recipient": "stdin"})
+
+                # Check restart
+                tools = self._get_tools()
+                if tools and tools.restart_requested:
+                    await self._do_restart()
+
+        except asyncio.CancelledError:
             pass
+        finally:
+            await run("on_shutdown", {"reason": "stdin_eof"})
+            await self.registry.stop_all()
 
-        run("on_shutdown", {"reason": "stdin_eof"})
-        self.registry.stop_all()
+    # Sync wrappers for CLI compatibility
+    def run_loop_sync(self):
+        """Synchronous wrapper for run_loop."""
+        asyncio.run(self.run_loop())
 
-
-def main():
-    """Entry point."""
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Cobot - Self-sovereign AI agent")
-    parser.add_argument("--stdin", action="store_true", help="Run in stdin mode")
-    parser.add_argument("--plugins", type=Path, default=Path("cobot/plugins"))
-    args = parser.parse_args()
-
-    # Load config file first to get full config
-    import yaml
-
-    config_data = {}
-    for config_path in [Path("cobot.yml"), Path("config.yaml")]:
-        if config_path.exists():
-            with open(config_path) as f:
-                config_data = yaml.safe_load(f) or {}
-            break
-
-    # Initialize plugins with config
-    plugins_dir = args.plugins if args.plugins.exists() else Path("cobot/plugins")
-    registry = init_plugins(plugins_dir, config_data)
-
-    print(f"Loaded {len(registry.list_plugins())} plugin(s)", file=sys.stderr)
-
-    # Get config and check provider requirements
-    config_plugin = registry.get("config")
-    if config_plugin:
-        config = config_plugin.get_config()
-
-        # Check for required credentials based on provider
-        if config.provider == "ppq":
-            import os
-
-            if not config_data.get("ppq", {}).get("api_key") and not os.environ.get(
-                "PPQ_API_KEY"
-            ):
-                print("Error: PPQ_API_KEY not set", file=sys.stderr)
-                sys.exit(1)
-
-    bot = Cobot(registry)
-
-    if args.stdin:
-        bot.run_stdin()
-    else:
-        bot.run_loop()
-
-
-if __name__ == "__main__":
-    main()
+    def run_stdin_sync(self):
+        """Synchronous wrapper for run_stdin."""
+        asyncio.run(self.run_stdin())

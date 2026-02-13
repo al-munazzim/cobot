@@ -7,6 +7,8 @@ The registry handles:
 - Lifecycle management (configure, start, stop)
 - Lookup by ID or capability
 - Hook execution
+
+NOTE: As of v0.2.0, lifecycle methods (start, stop) and hooks are async.
 """
 
 import sys
@@ -194,7 +196,7 @@ class PluginRegistry:
                 )
                 raise PluginError(f"Configuration failed for '{plugin_id}': {e}")
 
-    def start_all(self) -> None:
+    async def start_all(self) -> None:
         """Start all plugins in dependency order."""
         if self._started:
             return
@@ -203,7 +205,7 @@ class PluginRegistry:
             plugin = self._plugins[plugin_id]
 
             try:
-                plugin.start()
+                await plugin.start()
                 print(f"[Registry] Started '{plugin_id}'", file=sys.stderr)
             except Exception as e:
                 print(f"[Registry] Failed to start '{plugin_id}': {e}", file=sys.stderr)
@@ -211,7 +213,7 @@ class PluginRegistry:
 
         self._started = True
 
-    def stop_all(self) -> None:
+    async def stop_all(self) -> None:
         """Stop all plugins in reverse dependency order."""
         if not self._started:
             return
@@ -220,14 +222,14 @@ class PluginRegistry:
             plugin = self._plugins[plugin_id]
 
             try:
-                plugin.stop()
+                await plugin.stop()
                 print(f"[Registry] Stopped '{plugin_id}'", file=sys.stderr)
             except Exception as e:
                 print(f"[Registry] Error stopping '{plugin_id}': {e}", file=sys.stderr)
 
         self._started = False
 
-    def run_hook(self, hook_name: str, ctx: dict) -> dict:
+    async def run_hook(self, hook_name: str, ctx: dict) -> dict:
         """Run a hook on all plugins that implement it.
 
         Hooks are run in load order. Each plugin can modify the context.
@@ -256,7 +258,7 @@ class PluginRegistry:
                 continue
 
             try:
-                result = method(ctx)
+                result = await method(ctx)
                 if result is not None:
                     ctx = result
                 if ctx.get("abort"):
@@ -266,7 +268,7 @@ class PluginRegistry:
                     f"[Registry] Error in {plugin_id}.{hook_name}: {e}", file=sys.stderr
                 )
                 if hook_name != "on_error":
-                    self.run_hook(
+                    await self.run_hook(
                         "on_error",
                         {
                             "error": e,
@@ -308,8 +310,20 @@ def get_registry() -> PluginRegistry:
 
 
 def reset_registry() -> None:
-    """Reset the global registry (for testing)."""
+    """Reset the global registry (for testing).
+
+    Note: This is synchronous for test compatibility. If the registry
+    was started, you should call `await registry.stop_all()` first.
+    """
+    global _registry
+    if _registry:
+        _registry._started = False  # Mark as stopped without async cleanup
+    _registry = None
+
+
+async def reset_registry_async() -> None:
+    """Reset the global registry with proper async cleanup."""
     global _registry
     if _registry and _registry._started:
-        _registry.stop_all()
+        await _registry.stop_all()
     _registry = None

@@ -53,7 +53,7 @@ class FileDropPlugin(Plugin, CommunicationProvider):
             or "agent"
         )
 
-    def start(self) -> None:
+    async def start(self) -> None:
         """Initialize directories."""
         # Create base directory if it doesn't exist
         self._base_dir.mkdir(parents=True, exist_ok=True)
@@ -72,7 +72,7 @@ class FileDropPlugin(Plugin, CommunicationProvider):
 
         print(f"[FileDrop] Inbox: {self._inbox}", file=sys.stderr)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         """Nothing to clean up."""
         pass
 

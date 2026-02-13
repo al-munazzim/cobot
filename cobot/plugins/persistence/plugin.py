@@ -35,7 +35,7 @@ class PersistencePlugin(Plugin):
         persistence_config = config.get("persistence", {})
         self._enabled = persistence_config.get("enabled", False)
 
-    def start(self) -> None:
+    async def start(self) -> None:
         if not self._enabled:
             print(
                 "[Persistence] Disabled (use --continue to load history)",
@@ -60,7 +60,7 @@ class PersistencePlugin(Plugin):
         self._memory_dir.mkdir(parents=True, exist_ok=True)
         print(f"[Persistence] Memory dir: {self._memory_dir}", file=sys.stderr)
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         pass
 
     def _npub_hash(self, npub: str) -> str:
@@ -104,7 +104,7 @@ class PersistencePlugin(Plugin):
 
     # --- Hook Methods ---
 
-    def on_message_received(self, ctx: dict) -> dict:
+    async def on_message_received(self, ctx: dict) -> dict:
         if not self._enabled:
             return ctx
 
@@ -117,7 +117,7 @@ class PersistencePlugin(Plugin):
 
         return ctx
 
-    def transform_history(self, ctx: dict) -> dict:
+    async def transform_history(self, ctx: dict) -> dict:
         if not self._enabled:
             return ctx
 
@@ -145,7 +145,7 @@ class PersistencePlugin(Plugin):
 
         return ctx
 
-    def on_after_send(self, ctx: dict) -> dict:
+    async def on_after_send(self, ctx: dict) -> dict:
         if not self._enabled:
             return ctx
 

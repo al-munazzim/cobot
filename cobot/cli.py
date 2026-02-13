@@ -136,10 +136,14 @@ def run(
         else:
             raw_config["persistence"]["enabled"] = False
 
-        # Load plugins with config
+        # Load plugins with config (async init)
+        import asyncio
+
         plugins_dir = Path(plugins) if plugins else Path("cobot/plugins")
         if plugins_dir.exists():
-            registry = plugin_system.init_plugins(plugins_dir, config=raw_config)
+            registry = asyncio.run(
+                plugin_system.init_plugins(plugins_dir, config=raw_config)
+            )
             click.echo(f"Loaded {registry} plugin(s)", err=True)
         else:
             registry = plugin_system.get_registry()
@@ -167,9 +171,9 @@ def run(
         signal.signal(signal.SIGUSR1, handle_restart)
 
         if stdin:
-            bot.run_stdin()
+            bot.run_stdin_sync()
         else:
-            bot.run_loop()
+            bot.run_loop_sync()
     finally:
         remove_pid()
 

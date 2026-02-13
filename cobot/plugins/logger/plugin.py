@@ -29,10 +29,10 @@ class LoggerPlugin(Plugin):
         logger_config = config.get("logger", {})
         self._level = logger_config.get("level", "info")
 
-    def start(self) -> None:
+    async def start(self) -> None:
         pass
 
-    def stop(self) -> None:
+    async def stop(self) -> None:
         pass
 
     def _should_log(self, level: str) -> bool:
@@ -49,13 +49,13 @@ class LoggerPlugin(Plugin):
 
     # --- Hook Methods ---
 
-    def on_message_received(self, ctx: dict) -> dict:
+    async def on_message_received(self, ctx: dict) -> dict:
         msg = ctx.get("message", "")[:50]
         sender = ctx.get("sender", "")[:16]
         self._log("info", "msg_recv", f"From {sender}...", content=msg)
         return ctx
 
-    def on_before_llm_call(self, ctx: dict) -> dict:
+    async def on_before_llm_call(self, ctx: dict) -> dict:
         model = ctx.get("model", "")
         messages = ctx.get("messages", [])
 
@@ -71,13 +71,13 @@ class LoggerPlugin(Plugin):
             self._log("debug", "llm_call", f"System: {sys_prompt}...")
         return ctx
 
-    def on_after_llm_call(self, ctx: dict) -> dict:
+    async def on_after_llm_call(self, ctx: dict) -> dict:
         tokens_in = ctx.get("tokens_in", 0)
         tokens_out = ctx.get("tokens_out", 0)
         self._log("info", "llm_done", f"Tokens: {tokens_in}→{tokens_out}")
         return ctx
 
-    def on_before_tool_exec(self, ctx: dict) -> dict:
+    async def on_before_tool_exec(self, ctx: dict) -> dict:
         tool = ctx.get("tool", "")
         args = ctx.get("args", {})
 
@@ -102,7 +102,7 @@ class LoggerPlugin(Plugin):
         self._log("info", "tool", f"{tool}: {detail}")
         return ctx
 
-    def on_after_tool_exec(self, ctx: dict) -> dict:
+    async def on_after_tool_exec(self, ctx: dict) -> dict:
         tool = ctx.get("tool", "")
         result = ctx.get("result", "")
 
@@ -118,12 +118,12 @@ class LoggerPlugin(Plugin):
         self._log("info", "tool_done", f"{tool} → {result_preview}")
         return ctx
 
-    def on_after_send(self, ctx: dict) -> dict:
+    async def on_after_send(self, ctx: dict) -> dict:
         recipient = ctx.get("recipient", "")[:16]
         self._log("info", "send", f"Sent to {recipient}...")
         return ctx
 
-    def on_error(self, ctx: dict) -> dict:
+    async def on_error(self, ctx: dict) -> dict:
         error = ctx.get("error", "")
         hook = ctx.get("hook", "")
         self._log("error", "error", f"In {hook}: {error}")

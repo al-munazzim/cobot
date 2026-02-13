@@ -26,7 +26,13 @@ from .interfaces import (
     ToolProvider,
     ToolResult,
 )
-from .registry import PluginRegistry, PluginError, get_registry, reset_registry
+from .registry import (
+    PluginRegistry,
+    PluginError,
+    get_registry,
+    reset_registry,
+    reset_registry_async,
+)
 
 
 def discover_plugins(plugins_dir: Path) -> list[type[Plugin]]:
@@ -130,7 +136,7 @@ def load_external_plugins(packages: list[str]) -> list[type]:
     return plugin_classes
 
 
-def init_plugins(plugins_dir: Path, config: dict = None) -> PluginRegistry:
+async def init_plugins(plugins_dir: Path, config: dict = None) -> PluginRegistry:
     """Initialize the plugin system.
 
     1. Discover plugins from directory
@@ -138,7 +144,7 @@ def init_plugins(plugins_dir: Path, config: dict = None) -> PluginRegistry:
     3. Filter based on config (provider selection, enabled/disabled)
     4. Register plugins
     5. Configure all plugins
-    6. Start all plugins
+    6. Start all plugins (async)
 
     Args:
         plugins_dir: Directory containing plugin subdirectories
@@ -202,11 +208,11 @@ def init_plugins(plugins_dir: Path, config: dict = None) -> PluginRegistry:
         except PluginError as e:
             print(f"[Plugins] Failed to register: {e}", file=sys.stderr)
 
-    # Configure all plugins
+    # Configure all plugins (sync - just config assignment)
     registry.configure_all(config)
 
-    # Start all plugins
-    registry.start_all()
+    # Start all plugins (async)
+    await registry.start_all()
 
     # Give tools and compaction access to registry
     tools = registry.get("tools")
@@ -221,9 +227,9 @@ def init_plugins(plugins_dir: Path, config: dict = None) -> PluginRegistry:
 
 
 # Convenience functions for hook execution
-def run(hook_name: str, ctx: dict) -> dict:
-    """Run a hook on all plugins."""
-    return get_registry().run_hook(hook_name, ctx)
+async def run(hook_name: str, ctx: dict) -> dict:
+    """Run a hook on all plugins (async)."""
+    return await get_registry().run_hook(hook_name, ctx)
 
 
 __all__ = [
@@ -247,6 +253,7 @@ __all__ = [
     "PluginError",
     "get_registry",
     "reset_registry",
+    "reset_registry_async",
     # Functions
     "discover_plugins",
     "init_plugins",
