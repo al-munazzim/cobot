@@ -97,11 +97,19 @@ def run(config: Optional[str], stdin: bool, plugins: Optional[str]):
     try:
         from cobot import plugins as plugin_system
         from cobot.agent import Cobot
+        import yaml
 
-        # Load plugins first
+        # Load config file first (for plugin filtering)
+        config_path = Path(config) if config else Path("cobot.yml")
+        raw_config = {}
+        if config_path.exists():
+            with open(config_path) as f:
+                raw_config = yaml.safe_load(f) or {}
+
+        # Load plugins with config
         plugins_dir = Path(plugins) if plugins else Path("cobot/plugins")
         if plugins_dir.exists():
-            registry = plugin_system.init_plugins(plugins_dir)
+            registry = plugin_system.init_plugins(plugins_dir, config=raw_config)
             click.echo(f"Loaded {registry} plugin(s)", err=True)
         else:
             registry = plugin_system.get_registry()
