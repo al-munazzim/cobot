@@ -15,14 +15,14 @@ class TestWorkspacePlugin:
         from cobot.plugins.workspace import create_plugin
 
         plugin = create_plugin()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             plugin.configure({"workspace": tmpdir})
             plugin.start()
-            
+
             # Should provide workspace root
             assert plugin.get_path() == Path(tmpdir)
-            
+
             # Should provide subdirectory paths
             assert plugin.get_path("memory") == Path(tmpdir) / "memory"
             assert plugin.get_path("skills") == Path(tmpdir) / "skills"
@@ -32,12 +32,12 @@ class TestWorkspacePlugin:
         from cobot.plugins.workspace import create_plugin
 
         plugin = create_plugin()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             workspace_dir = Path(tmpdir) / "workspace"
             plugin.configure({"workspace": str(workspace_dir)})
             plugin.start()
-            
+
             # Should create workspace and subdirs
             assert workspace_dir.exists()
             assert (workspace_dir / "memory").exists()
@@ -50,20 +50,22 @@ class TestWorkspacePlugin:
         from cobot.plugins.workspace import create_plugin
 
         plugin = create_plugin()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             cli_path = Path(tmpdir) / "cli"
             env_path = Path(tmpdir) / "env"
-            
+
             os.environ["COBOT_WORKSPACE"] = str(env_path)
             try:
                 # _resolved_workspace simulates CLI resolution
-                plugin.configure({
-                    "workspace": str(env_path),
-                    "_cli_workspace": str(cli_path),
-                })
+                plugin.configure(
+                    {
+                        "workspace": str(env_path),
+                        "_cli_workspace": str(cli_path),
+                    }
+                )
                 plugin.start()
-                
+
                 assert plugin.get_path() == cli_path
             finally:
                 del os.environ["COBOT_WORKSPACE"]
@@ -73,16 +75,16 @@ class TestWorkspacePlugin:
         from cobot.plugins.workspace import create_plugin
 
         plugin = create_plugin()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             env_path = Path(tmpdir) / "env"
             config_path = Path(tmpdir) / "config"
-            
+
             os.environ["COBOT_WORKSPACE"] = str(env_path)
             try:
                 plugin.configure({"workspace": str(config_path)})
                 plugin.start()
-                
+
                 assert plugin.get_path() == env_path
             finally:
                 del os.environ["COBOT_WORKSPACE"]
@@ -93,7 +95,7 @@ class TestWorkspacePlugin:
 
         plugin = create_plugin()
         plugin.configure({})
-        
+
         expected = Path.home() / ".cobot" / "workspace"
         assert plugin.get_path() == expected
 
@@ -106,16 +108,16 @@ class TestSoulPlugin:
         from cobot.plugins.soul import create_plugin
 
         plugin = create_plugin()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create SOUL.md
             soul_content = "You are a helpful assistant named Bob."
             (Path(tmpdir) / "SOUL.md").write_text(soul_content)
-            
+
             # Mock workspace path
             plugin.configure({"_workspace_path": tmpdir})
             plugin.start()
-            
+
             assert plugin.get_soul() == soul_content
 
     def test_soul_returns_empty_if_no_file(self):
@@ -123,11 +125,11 @@ class TestSoulPlugin:
         from cobot.plugins.soul import create_plugin
 
         plugin = create_plugin()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             plugin.configure({"_workspace_path": tmpdir})
             plugin.start()
-            
+
             assert plugin.get_soul() == ""
 
     def test_soul_implements_context_extension_point(self):
@@ -135,7 +137,7 @@ class TestSoulPlugin:
         from cobot.plugins.soul import create_plugin
 
         plugin = create_plugin()
-        
+
         assert "context.system_prompt" in plugin.meta.implements
 
 
@@ -147,7 +149,7 @@ class TestContextPlugin:
         from cobot.plugins.context import create_plugin
 
         plugin = create_plugin()
-        
+
         assert "context.system_prompt" in plugin.meta.extension_points
         assert "context.history" in plugin.meta.extension_points
 
@@ -156,22 +158,22 @@ class TestContextPlugin:
         from cobot.plugins.context import create_plugin
 
         plugin = create_plugin()
-        
+
         # Mock registry with implementers
         class MockImplementer:
             def get_prompt(self):
                 return "I am helpful."
-        
+
         class MockRegistry:
             def get_implementations(self, ext_point):
                 if ext_point == "context.system_prompt":
                     return [("soul", MockImplementer(), "get_prompt")]
                 return []
-        
+
         plugin._registry = MockRegistry()
         plugin.configure({})
         plugin.start()
-        
+
         prompt = plugin.build_system_prompt()
         assert "I am helpful." in prompt
 
@@ -184,7 +186,7 @@ class TestMemoryPlugin:
         from cobot.plugins.memory import create_plugin
 
         plugin = create_plugin()
-        
+
         assert "memory.store" in plugin.meta.extension_points
         assert "memory.retrieve" in plugin.meta.extension_points
         assert "memory.search" in plugin.meta.extension_points
@@ -194,22 +196,22 @@ class TestMemoryPlugin:
         from cobot.plugins.memory import create_plugin
 
         plugin = create_plugin()
-        
+
         # Mock registry with implementations
         class MockImpl:
             def search(self, query):
                 return [{"source": "test", "content": "found it"}]
-        
+
         class MockRegistry:
             def get_implementations(self, ext_point):
                 if ext_point == "memory.search":
                     return [("memory-files", MockImpl(), "search")]
                 return []
-        
+
         plugin._registry = MockRegistry()
         plugin.configure({})
         plugin.start()
-        
+
         results = plugin.search("test query")
         assert len(results) == 1
         assert results[0]["content"] == "found it"
@@ -223,16 +225,16 @@ class TestMemoryFilesPlugin:
         from cobot.plugins.memory_files import create_plugin
 
         plugin = create_plugin()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             files_dir = Path(tmpdir) / "memory" / "files"
             files_dir.mkdir(parents=True)
-            
+
             plugin.configure({"_workspace_path": tmpdir})
             plugin.start()
-            
+
             plugin.store("test_key", "Hello world")
-            
+
             assert (files_dir / "test_key.md").exists()
             assert (files_dir / "test_key.md").read_text() == "Hello world"
 
@@ -241,15 +243,15 @@ class TestMemoryFilesPlugin:
         from cobot.plugins.memory_files import create_plugin
 
         plugin = create_plugin()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             files_dir = Path(tmpdir) / "memory" / "files"
             files_dir.mkdir(parents=True)
             (files_dir / "test.md").write_text("Previous content")
-            
+
             plugin.configure({"_workspace_path": tmpdir})
             plugin.start()
-            
+
             content = plugin.retrieve("test")
             assert content == "Previous content"
 
@@ -258,16 +260,16 @@ class TestMemoryFilesPlugin:
         from cobot.plugins.memory_files import create_plugin
 
         plugin = create_plugin()
-        
+
         with tempfile.TemporaryDirectory() as tmpdir:
             files_dir = Path(tmpdir) / "memory" / "files"
             files_dir.mkdir(parents=True)
             (files_dir / "note1.md").write_text("Meeting about project Alpha")
             (files_dir / "note2.md").write_text("Lunch plans for Tuesday")
-            
+
             plugin.configure({"_workspace_path": tmpdir})
             plugin.start()
-            
+
             results = plugin.search("Alpha")
             assert len(results) == 1
             assert "Alpha" in results[0]["content"]
@@ -277,7 +279,7 @@ class TestMemoryFilesPlugin:
         from cobot.plugins.memory_files import create_plugin
 
         plugin = create_plugin()
-        
+
         assert "memory.store" in plugin.meta.implements
         assert "memory.retrieve" in plugin.meta.implements
         assert "memory.search" in plugin.meta.implements
