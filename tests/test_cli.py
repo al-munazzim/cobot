@@ -98,6 +98,110 @@ class TestCliCommands:
             )
 
 
+class TestConfigSetGet:
+    """Test config set/get commands."""
+
+    @pytest.fixture
+    def runner(self):
+        return CliRunner()
+
+    def test_config_set_simple(self, runner):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "cobot.yml"
+            config_path.write_text("identity:\n  name: OldName\n")
+
+            result = runner.invoke(
+                cli, ["config", "set", "identity.name", "NewName", "-c", str(config_path)]
+            )
+            assert result.exit_code == 0
+            assert "NewName" in result.output
+
+            # Verify file was updated
+            import yaml
+            with open(config_path) as f:
+                cfg = yaml.safe_load(f)
+            assert cfg["identity"]["name"] == "NewName"
+
+    def test_config_set_creates_nested(self, runner):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "cobot.yml"
+            config_path.write_text("")
+
+            result = runner.invoke(
+                cli, ["config", "set", "ppq.model", "openai/gpt-4o", "-c", str(config_path)]
+            )
+            assert result.exit_code == 0
+
+            import yaml
+            with open(config_path) as f:
+                cfg = yaml.safe_load(f)
+            assert cfg["ppq"]["model"] == "openai/gpt-4o"
+
+    def test_config_set_integer(self, runner):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "cobot.yml"
+            config_path.write_text("")
+
+            result = runner.invoke(
+                cli, ["config", "set", "exec.timeout", "60", "-c", str(config_path)]
+            )
+            assert result.exit_code == 0
+
+            import yaml
+            with open(config_path) as f:
+                cfg = yaml.safe_load(f)
+            assert cfg["exec"]["timeout"] == 60
+            assert isinstance(cfg["exec"]["timeout"], int)
+
+    def test_config_set_boolean(self, runner):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "cobot.yml"
+            config_path.write_text("")
+
+            result = runner.invoke(
+                cli, ["config", "set", "exec.enabled", "false", "-c", str(config_path)]
+            )
+            assert result.exit_code == 0
+
+            import yaml
+            with open(config_path) as f:
+                cfg = yaml.safe_load(f)
+            assert cfg["exec"]["enabled"] is False
+
+    def test_config_get_simple(self, runner):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "cobot.yml"
+            config_path.write_text("identity:\n  name: TestBot\n")
+
+            result = runner.invoke(
+                cli, ["config", "get", "identity.name", "-c", str(config_path)]
+            )
+            assert result.exit_code == 0
+            assert "TestBot" in result.output
+
+    def test_config_get_nested(self, runner):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "cobot.yml"
+            config_path.write_text("ppq:\n  model: openai/gpt-4o\n  api_base: https://api.ppq.ai\n")
+
+            result = runner.invoke(
+                cli, ["config", "get", "ppq.model", "-c", str(config_path)]
+            )
+            assert result.exit_code == 0
+            assert "openai/gpt-4o" in result.output
+
+    def test_config_get_not_found(self, runner):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "cobot.yml"
+            config_path.write_text("identity:\n  name: TestBot\n")
+
+            result = runner.invoke(
+                cli, ["config", "get", "nonexistent.key", "-c", str(config_path)]
+            )
+            assert result.exit_code == 1
+            assert "not found" in result.output.lower()
+
+
 class TestConfigMerging:
     """Test config merging logic."""
 

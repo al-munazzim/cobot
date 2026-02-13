@@ -407,6 +407,100 @@ inference:
     subprocess.run([editor, str(config_path)])
 
 
+@config.command("set")
+@click.argument("key")
+@click.argument("value")
+@click.option("--config", "-c", "config_path", type=click.Path(), help="Config file (default: cobot.yml)")
+def config_set(key: str, value: str, config_path: Optional[str]):
+    """Set a configuration value.
+
+    KEY uses dot notation for nested values (e.g., ppq.model, exec.timeout).
+
+    Examples:
+        cobot config set ppq.model openai/gpt-4o-mini
+        cobot config set exec.timeout 60
+        cobot config set identity.name MyBot
+    """
+    import yaml
+
+    path = Path(config_path) if config_path else Path("cobot.yml")
+
+    # Load existing config or start fresh
+    if path.exists():
+        with open(path) as f:
+            cfg = yaml.safe_load(f) or {}
+    else:
+        cfg = {}
+
+    # Parse value (try to interpret as int, float, bool, or keep as string)
+    parsed_value: any = value
+    if value.lower() == "true":
+        parsed_value = True
+    elif value.lower() == "false":
+        parsed_value = False
+    elif value.isdigit():
+        parsed_value = int(value)
+    else:
+        try:
+            parsed_value = float(value)
+        except ValueError:
+            parsed_value = value  # Keep as string
+
+    # Navigate to nested key and set value
+    keys = key.split(".")
+    current = cfg
+    for k in keys[:-1]:
+        if k not in current:
+            current[k] = {}
+        elif not isinstance(current[k], dict):
+            click.echo(f"Error: {k} is not a section, cannot set nested key", err=True)
+            sys.exit(1)
+        current = current[k]
+
+    old_value = current.get(keys[-1])
+    current[keys[-1]] = parsed_value
+
+    # Write back
+    with open(path, "w") as f:
+        yaml.dump(cfg, f, default_flow_style=False, sort_keys=False)
+
+    if old_value is not None:
+        click.echo(f"Updated {key}: {old_value} → {parsed_value}")
+    else:
+        click.echo(f"Set {key} = {parsed_value}")
+
+
+@config.command("get")
+@click.argument("key")
+@click.option("--config", "-c", "config_path", type=click.Path(), help="Config file (default: cobot.yml)")
+def config_get(key: str, config_path: Optional[str]):
+    """Get a configuration value.
+
+    KEY uses dot notation for nested values (e.g., ppq.model, exec.timeout).
+    """
+    import yaml
+
+    path = Path(config_path) if config_path else Path("cobot.yml")
+
+    if not path.exists():
+        click.echo(f"Config file not found: {path}", err=True)
+        sys.exit(1)
+
+    with open(path) as f:
+        cfg = yaml.safe_load(f) or {}
+
+    # Navigate to nested key
+    keys = key.split(".")
+    current = cfg
+    for k in keys:
+        if not isinstance(current, dict) or k not in current:
+            click.echo(f"Key not found: {key}", err=True)
+            sys.exit(1)
+        current = current[k]
+
+    click.echo(current)
+
+
 @config.command("validate")
 def config_validate():
     """Validate configuration."""
