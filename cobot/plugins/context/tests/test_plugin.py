@@ -1,6 +1,5 @@
 """Tests for context plugin."""
 
-
 from .. import create_plugin
 
 

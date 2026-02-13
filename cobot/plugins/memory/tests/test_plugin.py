@@ -1,6 +1,5 @@
 """Tests for memory plugin (extension point definer)."""
 
-
 from .. import create_plugin
 
 

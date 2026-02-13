@@ -83,8 +83,20 @@ def cli():
 @click.option("--stdin", is_flag=True, help="Run in stdin mode (no Nostr)")
 @click.option("--plugins", "-p", type=click.Path(exists=True), help="Plugins directory")
 @click.option("--debug", "-d", is_flag=True, help="Enable debug logging")
-@click.option("--continue", "-C", "continue_session", is_flag=True, help="Continue previous conversation")
-def run(config: Optional[str], stdin: bool, plugins: Optional[str], debug: bool, continue_session: bool):
+@click.option(
+    "--continue",
+    "-C",
+    "continue_session",
+    is_flag=True,
+    help="Continue previous conversation",
+)
+def run(
+    config: Optional[str],
+    stdin: bool,
+    plugins: Optional[str],
+    debug: bool,
+    continue_session: bool,
+):
     """Start the cobot agent."""
     # Check if already running
     existing_pid = read_pid()
@@ -367,7 +379,13 @@ def config():
 
 @config.command("show")
 @click.option("--raw", is_flag=True, help="Show raw YAML")
-@click.option("--config", "-c", "config_path", type=click.Path(), help="Config file (default: cobot.yml)")
+@click.option(
+    "--config",
+    "-c",
+    "config_path",
+    type=click.Path(),
+    help="Config file (default: cobot.yml)",
+)
 def config_show(raw: bool, config_path: Optional[str]):
     """Show current configuration.
 
@@ -427,7 +445,13 @@ inference:
 @config.command("set")
 @click.argument("key")
 @click.argument("value")
-@click.option("--config", "-c", "config_path", type=click.Path(), help="Config file (default: cobot.yml)")
+@click.option(
+    "--config",
+    "-c",
+    "config_path",
+    type=click.Path(),
+    help="Config file (default: cobot.yml)",
+)
 def config_set(key: str, value: str, config_path: Optional[str]):
     """Set a configuration value.
 
@@ -489,7 +513,13 @@ def config_set(key: str, value: str, config_path: Optional[str]):
 
 @config.command("get")
 @click.argument("key")
-@click.option("--config", "-c", "config_path", type=click.Path(), help="Config file (default: cobot.yml)")
+@click.option(
+    "--config",
+    "-c",
+    "config_path",
+    type=click.Path(),
+    help="Config file (default: cobot.yml)",
+)
 def config_get(key: str, config_path: Optional[str]):
     """Get a configuration value.
 
