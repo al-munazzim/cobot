@@ -104,7 +104,7 @@ class LoggerPlugin(Plugin):
         # Remove newlines for log readability
         result_preview = result_preview.replace("\n", "\\n")
         
-        self._log("debug", "tool_result", f"{tool}: {result_preview}")
+        self._log("info", "tool_done", f"{tool} → {result_preview}")
         return ctx
 
     def on_after_send(self, ctx: dict) -> dict:
