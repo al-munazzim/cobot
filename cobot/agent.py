@@ -151,7 +151,8 @@ class Cobot:
 
                 for tool_call in response.tool_calls:
                     tool_name = tool_call["function"]["name"]
-                    tool_args = json.loads(tool_call["function"]["arguments"])
+                    raw_args = tool_call["function"]["arguments"]
+                    tool_args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
                     tool_id = tool_call["id"]
 
                     # Hook: on_before_tool_exec
