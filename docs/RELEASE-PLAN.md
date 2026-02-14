@@ -28,7 +28,7 @@ This document outlines the release process for Cobot, including manual steps for
 | 1.4 | Generate SHA256SUMS | 🦊 Doxios | |
 | 1.5 | Create GitHub Release (draft) | 🦊 Doxios | |
 | 1.6 | Upload artifacts to release | 🦊 Doxios | |
-| 1.7 | **Sign SHA256SUMS with npub** | 👤 k9ert | |
+| 1.7 | **Sign SHA256SUMS with npub** | 🦊 Doxios | |
 | 1.8 | Upload signature to release | 🦊 Doxios | |
 | 1.9 | Publish release (mark experimental) | 🦊 Doxios | |
 
@@ -57,7 +57,7 @@ This document outlines the release process for Cobot, including manual steps for
 ## Installation
 
 ```bash
-pip install cobot[telegram]
+pip install git+https://github.com/ultanio/cobot.git@v0.1.0
 cobot wizard init
 cobot run
 ```
@@ -65,7 +65,7 @@ cobot run
 ## Checksums
 
 See `SHA256SUMS` for file checksums.
-Verify signature: `SHA256SUMS.sig` (signed with npub1...)
+Verify signature: `SHA256SUMS.sig` (signed with npub18r8ucl36dgk2p9qmzesmjk7tfzlptyt9tcj8j9kfxzkkpycc5qksvz2ret)
 
 ## Full Changelog
 
@@ -220,7 +220,9 @@ CMD ["run"]
 
 ### 2.5 Nostr Signing
 
-Sign `SHA256SUMS` with the project's npub for verification.
+Sign `SHA256SUMS` with Doxios's npub for verification.
+
+**Signing npub:** `npub18r8ucl36dgk2p9qmzesmjk7tfzlptyt9tcj8j9kfxzkkpycc5qksvz2ret` (Doxios)
 
 **Signing process:**
 1. Generate SHA256SUMS of all artifacts
@@ -237,7 +239,7 @@ cobot verify-release v0.1.0
 
 | # | Task | Owner | Status |
 |---|------|-------|--------|
-| 2.5.1 | **Create dedicated npub for releases** | 👤 k9ert | |
+| 2.5.1 | Create dedicated npub for releases | 🦊 Doxios | ✅ |
 | 2.5.2 | **Add NOSTR_NSEC to GitHub secrets** | 👤 k9ert | |
 | 2.5.3 | Create signing script | 🦊 Doxios | |
 | 2.5.4 | Add signing to release workflow | 🦊 Doxios | |
@@ -277,24 +279,31 @@ Use [git-cliff](https://github.com/orhun/git-cliff) or similar for automatic cha
 
 ## Summary: What You Need To Do (👤 k9ert)
 
+### Repository Protection (Priority)
+
+1. **Enable branch protection on `main`** (Settings → Branches → Add rule)
+   - Require pull request before merging
+   - Require status checks to pass (CI)
+   - Do not allow bypassing the above settings
+   - *Doxios cannot do this - requires admin permissions*
+
 ### For v0.1.0 (Now)
 
-1. **Sign SHA256SUMS with your npub** after I create the release draft
+2. Nothing! 🦊 Doxios handles signing with his own npub.
 
 ### For Automation (After v0.1.0)
 
-2. **PyPI Setup:**
+3. **PyPI Setup:**
    - Register `cobot` package name on pypi.org
    - Create API token with upload permissions
    - Add `PYPI_TOKEN` to GitHub repo secrets
 
-3. **GitHub Container Registry:**
+4. **GitHub Container Registry:**
    - Enable GHCR for ultanio org (Settings → Packages)
 
-4. **Nostr Signing:**
-   - Create dedicated npub/nsec for release signing
-   - Add `NOSTR_NSEC` to GitHub repo secrets
-   - Share the npub publicly for verification
+5. **Nostr Signing (automated releases):**
+   - Add `NOSTR_NSEC` to GitHub secrets (Doxios will provide the value securely)
+   - npub for verification: `npub18r8ucl36dgk2p9qmzesmjk7tfzlptyt9tcj8j9kfxzkkpycc5qksvz2ret`
 
 ---
 
@@ -302,8 +311,7 @@ Use [git-cliff](https://github.com/orhun/git-cliff) or similar for automatic cha
 
 ```
 Phase 1: Manual v0.1.0
-├── 1.1-1.6: Doxios creates release
-├── 1.7: k9ert signs
+├── 1.1-1.7: Doxios creates + signs release
 └── 1.8-1.9: Doxios publishes
 
 Phase 2: Automation  
@@ -312,7 +320,7 @@ Phase 2: Automation
 ├── 2.2: Release workflow (builds)
 ├── 2.3: Docker (k9ert enables GHCR)
 ├── 2.4: PyPI (k9ert sets up token)
-└── 2.5: Nostr signing (k9ert creates npub)
+└── 2.5: Nostr signing (Doxios npub, k9ert adds secret)
 ```
 
 ---
