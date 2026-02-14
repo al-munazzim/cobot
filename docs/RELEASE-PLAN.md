@@ -158,8 +158,8 @@ release:
 | # | Task | Owner | Status |
 |---|------|-------|--------|
 | 2.2.1 | Create `.github/workflows/release.yml` | 🦊 Doxios | |
-| 2.2.2 | **Set up PyPI API token** | 👤 k9ert | |
-| 2.2.3 | **Add PYPI_TOKEN to GitHub secrets** | 👤 k9ert | |
+| 2.2.2 | **Set up PyPI API token** | 👤 Admin | |
+| 2.2.3 | **Add PYPI_TOKEN to GitHub secrets** | 👤 Admin | |
 | 2.2.4 | Test workflow with `v0.1.1-rc1` tag | 🦊 Doxios | |
 
 ---
@@ -194,7 +194,7 @@ CMD ["run"]
 | 2.3.1 | Create `Dockerfile` | 🦊 Doxios | |
 | 2.3.2 | Create `.dockerignore` | 🦊 Doxios | |
 | 2.3.3 | Add Docker build to release workflow | 🦊 Doxios | |
-| 2.3.4 | **Enable GitHub Container Registry** | 👤 k9ert | |
+| 2.3.4 | **Enable GitHub Container Registry** | 👤 Admin | |
 
 ---
 
@@ -211,8 +211,8 @@ CMD ["run"]
 
 | # | Task | Owner | Status |
 |---|------|-------|--------|
-| 2.4.1 | **Register `cobot` on PyPI** | 👤 k9ert | |
-| 2.4.2 | **Create PyPI API token** | 👤 k9ert | |
+| 2.4.1 | **Register `cobot` on PyPI** | 👤 Admin | |
+| 2.4.2 | **Create PyPI API token** | 👤 Admin | |
 | 2.4.3 | Add PyPI publish to release workflow | 🦊 Doxios | |
 | 2.4.4 | Test with TestPyPI first | 🦊 Doxios | |
 
@@ -240,7 +240,7 @@ cobot verify-release v0.1.0
 | # | Task | Owner | Status |
 |---|------|-------|--------|
 | 2.5.1 | Create dedicated npub for releases | 🦊 Doxios | ✅ |
-| 2.5.2 | **Add NOSTR_NSEC to GitHub secrets** | 👤 k9ert | |
+| 2.5.2 | **Add NOSTR_NSEC to GitHub secrets** | 👤 Admin | ✅ |
 | 2.5.3 | Create signing script | 🦊 Doxios | |
 | 2.5.4 | Add signing to release workflow | 🦊 Doxios | |
 | 2.5.5 | Document verification process | 🦊 Doxios | |
@@ -277,7 +277,7 @@ Use [git-cliff](https://github.com/orhun/git-cliff) or similar for automatic cha
 
 ---
 
-## Summary: What You Need To Do (👤 k9ert)
+## Summary: What You Need To Do (👤 Admin)
 
 ### Repository Protection (Priority)
 
@@ -301,8 +301,8 @@ Use [git-cliff](https://github.com/orhun/git-cliff) or similar for automatic cha
 4. **GitHub Container Registry:**
    - Enable GHCR for ultanio org (Settings → Packages)
 
-5. **Nostr Signing (automated releases):**
-   - Add `NOSTR_NSEC` to GitHub secrets (Doxios will provide the value securely)
+5. **Nostr Signing (automated releases):** ✅
+   - `NOSTR_NSEC` added to GitHub secrets
    - npub for verification: `npub18r8ucl36dgk2p9qmzesmjk7tfzlptyt9tcj8j9kfxzkkpycc5qksvz2ret`
 
 ---
@@ -318,9 +318,9 @@ Phase 2: Automation
 ├── 2.1: Conventional commits setup
 ├── 2.6: Changelog generation
 ├── 2.2: Release workflow (builds)
-├── 2.3: Docker (k9ert enables GHCR)
-├── 2.4: PyPI (k9ert sets up token)
-└── 2.5: Nostr signing (Doxios npub, k9ert adds secret)
+├── 2.3: Docker (Admin enables GHCR) ✅
+├── 2.4: PyPI (Admin sets up token)
+└── 2.5: Nostr signing (Doxios npub) ✅
 ```
 
 ---
