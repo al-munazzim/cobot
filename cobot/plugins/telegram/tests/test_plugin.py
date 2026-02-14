@@ -649,7 +649,7 @@ class TestSessionReceive:
 
     def test_poll_updates_returns_incoming_messages(self):
         """Test poll_updates returns IncomingMessage objects."""
-        from cobot_telegram.plugin import IncomingMessage
+        from cobot.plugins.communication.plugin import IncomingMessage
 
         plugin = TelegramPlugin()
         plugin.configure({"bot_token": "test"})
@@ -702,7 +702,7 @@ class TestSessionSend:
 
     def test_send_message_without_token(self):
         """Test send_message returns False when not configured."""
-        from cobot_telegram.plugin import OutgoingMessage
+        from cobot.plugins.communication.plugin import OutgoingMessage
 
         plugin = TelegramPlugin()
         result = plugin.send_message(
@@ -716,7 +716,7 @@ class TestSessionSend:
 
     def test_send_message_success(self):
         """Test send_message returns True on success."""
-        from cobot_telegram.plugin import OutgoingMessage
+        from cobot.plugins.communication.plugin import OutgoingMessage
 
         plugin = TelegramPlugin()
         plugin.configure({"bot_token": "test"})
