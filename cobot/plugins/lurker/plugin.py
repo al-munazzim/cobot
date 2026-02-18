@@ -1,67 +1,61 @@
 """Lurker plugin - channel observation with pluggable sinks.
 
-Lurker observes all messages (incoming AND outgoing) on configured channels.
-It does NOT suppress bot responses — the bot can be active or silent
-independently. Lurking just means observing.
+Lurker observes all messages (incoming and outgoing) on configured channels
+by implementing session observer extension points. It never modifies the
+message flow — pure observation.
 
-It defines extension points so other plugins can decide what to do
-with observed messages (log to JSONL, archive to markdown, index, etc.).
+It defines its own extension point (lurker.on_observe) so other plugins
+can decide what to do with observed messages (index, search, analytics, etc.).
 
-This is mechanism: lurker decides WHICH channels to observe and
-provides the message stream. Sinks decide WHAT to do with messages.
+This is mechanism: lurker decides WHICH channels to observe and provides
+the message stream. Sinks decide WHAT to do with messages.
 
-Priority: 6 (very early for incoming; also hooks on_after_send for outgoing)
+Priority: 35 (after session and channels)
 """
 
+import asyncio
 import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 from ..base import Plugin, PluginMeta
+from ..communication import IncomingMessage, OutgoingMessage
 
 
 class LurkerPlugin(Plugin):
-    """Passive channel observer.
+    """Channel observer via session extension points.
 
-    Hooks into on_message_received. For channels configured as "lurk",
-    it captures the message and fires lurker.on_observe for sinks to handle.
+    Implements:
+      - session.on_receive: observe incoming messages
+      - session.on_send: observe outgoing messages
 
-    For channels NOT in the lurk list, it passes through untouched.
-
-    The lurker never modifies the message context — it only reads.
+    Defines:
+      - lurker.on_observe: fired for each observed message (for sinks)
 
     Config:
         lurker:
           channels:
-            - id: "-100123456789"     # Channel/group ID (string)
-              name: "dev-chat"        # Human label (optional)
+            - id: "-100123456789"
+              name: "dev-chat"
             - id: "-100987654321"
               name: "announcements"
-          sink: "jsonl"               # Default sink: jsonl | markdown | none
-          base_dir: "./lurker"        # Where file sinks write
-
-    Extension points defined:
-        lurker.on_observe  — called for every message (incoming or outgoing)
-                             on a lurked channel.
-                             ctx: {message, channel_id, channel_type,
-                                   channel_name, sender_id, sender_name,
-                                   timestamp, direction, raw_ctx}
-        lurker.on_edit     — called when an edit is observed
-        lurker.on_media    — called when media is observed
+          sink: "jsonl"               # jsonl | markdown | none
+          base_dir: "./lurker"
     """
 
     meta = PluginMeta(
         id="lurker",
-        version="0.1.0",
+        version="0.2.0",
         capabilities=["lurker"],
-        dependencies=[],
-        priority=6,  # Before logger (5 is taken), before session routing
+        dependencies=["session"],
+        priority=35,  # After session (10) and channels (30)
+        implements={
+            "session.on_receive": "observe_incoming",
+            "session.on_send": "observe_outgoing",
+        },
         extension_points=[
             "lurker.on_observe",
-            "lurker.on_edit",
-            "lurker.on_media",
         ],
     )
 
@@ -103,9 +97,7 @@ class LurkerPlugin(Plugin):
 
         if self._sink != "none":
             self._base_dir.mkdir(parents=True, exist_ok=True)
-            print(
-                f"[Lurker] Sink: {self._sink} → {self._base_dir}", file=sys.stderr
-            )
+            print(f"[Lurker] Sink: {self._sink} → {self._base_dir}", file=sys.stderr)
 
     async def stop(self) -> None:
         """Report stats on shutdown."""
@@ -120,75 +112,71 @@ class LurkerPlugin(Plugin):
         """Check if a channel is in lurk mode."""
         return str(channel_id) in self._channels
 
-    def _channel_name(self, channel_id: str) -> str:
-        """Get human name for a channel."""
+    def _channel_name(self, channel_id: str, metadata: dict = None) -> str:
+        """Get human name for a channel.
+
+        Checks message metadata first (channel plugins may set group_name),
+        falls back to lurker config, then raw channel_id.
+        """
+        if metadata:
+            name = metadata.get("group_name")
+            if name:
+                return name
         return self._channels.get(str(channel_id), str(channel_id))
 
-    # --- Hooks ---
+    # --- Session Observer Implementations ---
 
-    async def on_message_received(self, ctx: dict) -> dict:
-        """Observe incoming messages on lurked channels.
+    def observe_incoming(self, msg: IncomingMessage) -> None:
+        """Observe an incoming message (session.on_receive).
 
-        Pure observation — never modifies ctx.
+        Args:
+            msg: Full IncomingMessage from the session layer.
         """
-        channel_id = str(ctx.get("channel_id", ""))
+        if not self.is_lurked(msg.channel_id):
+            return
 
-        if not self.is_lurked(channel_id):
-            return ctx
-
-        obs = self._build_observation(
-            channel_id=channel_id,
-            channel_type=ctx.get("channel_type", ""),
-            sender_id=ctx.get("sender_id", ""),
-            sender_name=ctx.get("sender", ""),
-            message=ctx.get("message", ""),
-            event_id=ctx.get("event_id", ""),
-            direction="incoming",
-            raw_ctx=ctx,
-        )
-
-        await self._observe(obs)
-        return ctx
-
-    async def on_after_send(self, ctx: dict) -> dict:
-        """Observe outgoing messages (bot responses) on lurked channels."""
-        channel_id = str(ctx.get("channel_id", ""))
-
-        if not self.is_lurked(channel_id):
-            return ctx
-
-        obs = self._build_observation(
-            channel_id=channel_id,
-            channel_type=ctx.get("channel_type", ""),
-            sender_id="self",
-            sender_name="bot",
-            message=ctx.get("text", ""),
-            event_id="",
-            direction="outgoing",
-            raw_ctx=ctx,
-        )
-
-        await self._observe(obs)
-        return ctx
-
-    def _build_observation(self, *, channel_id, channel_type, sender_id,
-                           sender_name, message, event_id, direction,
-                           raw_ctx) -> dict:
-        """Build a normalized observation dict."""
-        return {
-            "message": message,
-            "channel_id": channel_id,
-            "channel_type": channel_type,
-            "channel_name": self._channel_name(channel_id),
-            "sender_id": sender_id,
-            "sender_name": sender_name,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "event_id": event_id,
-            "direction": direction,
-            "raw_ctx": raw_ctx,
+        obs = {
+            "direction": "incoming",
+            "channel_id": msg.channel_id,
+            "channel_type": msg.channel_type,
+            "channel_name": self._channel_name(msg.channel_id, msg.metadata),
+            "sender_id": msg.sender_id,
+            "sender_name": msg.sender_name,
+            "message": msg.content,
+            "timestamp": msg.timestamp.isoformat()
+            if isinstance(msg.timestamp, datetime)
+            else str(msg.timestamp),
+            "event_id": msg.id,
+            "media": msg.media,
         }
 
-    async def _observe(self, obs: dict) -> None:
+        self._observe(obs)
+
+    def observe_outgoing(self, msg: OutgoingMessage) -> None:
+        """Observe an outgoing message (session.on_send).
+
+        Args:
+            msg: Full OutgoingMessage from the session layer.
+        """
+        if not self.is_lurked(msg.channel_id):
+            return
+
+        obs = {
+            "direction": "outgoing",
+            "channel_id": msg.channel_id,
+            "channel_type": msg.channel_type,
+            "channel_name": self._channel_name(msg.channel_id, msg.metadata),
+            "sender_id": "self",
+            "sender_name": "bot",
+            "message": msg.content,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "event_id": "",
+            "media": msg.media,
+        }
+
+        self._observe(obs)
+
+    def _observe(self, obs: dict) -> None:
         """Process an observation: count, fire extension points, write sink."""
         channel_id = obs["channel_id"]
         self._counts[channel_id] = self._counts.get(channel_id, 0) + 1
@@ -201,7 +189,9 @@ class LurkerPlugin(Plugin):
                 try:
                     method = getattr(plugin, method_name)
                     if asyncio.iscoroutinefunction(method):
-                        await method(obs)
+                        # Lurker observers are sync (called from sync session methods),
+                        # but handle async gracefully if needed in future
+                        pass
                     else:
                         method(obs)
                 except Exception as e:
@@ -220,14 +210,14 @@ class LurkerPlugin(Plugin):
         elif self._sink == "markdown":
             self._write_markdown(obs)
 
-    def _day_dir(self, channel_id: str) -> Path:
-        """Get date-based directory for a channel."""
+    def _day_dir(self) -> Path:
+        """Get date-based directory."""
         date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         return self._base_dir / date_str
 
     def _write_jsonl(self, obs: dict) -> None:
         """Write one JSONL line per message."""
-        day_dir = self._day_dir(obs["channel_id"])
+        day_dir = self._day_dir()
         day_dir.mkdir(parents=True, exist_ok=True)
 
         filepath = day_dir / f"{obs['channel_id']}.jsonl"
@@ -247,13 +237,15 @@ class LurkerPlugin(Plugin):
 
     def _write_markdown(self, obs: dict) -> None:
         """Write markdown-formatted log."""
-        day_dir = self._day_dir(obs["channel_id"])
+        day_dir = self._day_dir()
         day_dir.mkdir(parents=True, exist_ok=True)
 
         filepath = day_dir / f"{obs['channel_id']}.md"
         ts = obs["timestamp"][:19].replace("T", " ")
         sender = obs["sender_name"] or obs["sender_id"]
         text = obs["message"]
+        direction = obs["direction"]
+        prefix = "→" if direction == "outgoing" else ""
 
         # Write header if new file
         if not filepath.exists():
@@ -263,9 +255,6 @@ class LurkerPlugin(Plugin):
             )
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(header)
-
-        direction = obs.get("direction", "incoming")
-        prefix = "→" if direction == "outgoing" else ""
 
         with open(filepath, "a", encoding="utf-8") as f:
             f.write(f"{prefix}**{sender}** ({ts}):\n{text}\n\n")
@@ -309,10 +298,6 @@ class LurkerPlugin(Plugin):
             "sink": sink,
             "base_dir": base_dir,
         }
-
-
-# Need asyncio for checking coroutine functions
-import asyncio
 
 
 def create_plugin() -> LurkerPlugin:
