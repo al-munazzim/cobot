@@ -1,13 +1,16 @@
-"""Lurker plugin - passive channel observation with pluggable sinks.
+"""Lurker plugin - channel observation with pluggable sinks.
 
-Lurker sits in channels and observes messages without responding.
+Lurker observes all messages (incoming AND outgoing) on configured channels.
+It does NOT suppress bot responses — the bot can be active or silent
+independently. Lurking just means observing.
+
 It defines extension points so other plugins can decide what to do
 with observed messages (log to JSONL, archive to markdown, index, etc.).
 
 This is mechanism: lurker decides WHICH channels to observe and
 provides the message stream. Sinks decide WHAT to do with messages.
 
-Priority: 6 (very early — must run before agent decides to respond)
+Priority: 6 (very early for incoming; also hooks on_after_send for outgoing)
 """
 
 import json
@@ -39,10 +42,11 @@ class LurkerPlugin(Plugin):
           base_dir: "./lurker"        # Where file sinks write
 
     Extension points defined:
-        lurker.on_observe  — called for every message in a lurked channel
+        lurker.on_observe  — called for every message (incoming or outgoing)
+                             on a lurked channel.
                              ctx: {message, channel_id, channel_type,
                                    channel_name, sender_id, sender_name,
-                                   timestamp, raw_ctx}
+                                   timestamp, direction, raw_ctx}
         lurker.on_edit     — called when an edit is observed
         lurker.on_media    — called when media is observed
     """
@@ -119,35 +123,73 @@ class LurkerPlugin(Plugin):
         """Get human name for a channel."""
         return self._channels.get(str(channel_id), str(channel_id))
 
-    # --- Hook: on_message_received ---
+    # --- Hooks ---
 
     async def on_message_received(self, ctx: dict) -> dict:
-        """Intercept messages from lurked channels.
+        """Observe incoming messages on lurked channels.
 
-        For lurked channels: observe, fire extension points, abort response.
-        For other channels: pass through untouched.
+        Does NOT abort — the bot can still respond. Lurking is observation only.
         """
         channel_id = str(ctx.get("channel_id", ""))
 
         if not self.is_lurked(channel_id):
             return ctx
 
-        channel_name = self._channel_name(channel_id)
+        obs = self._build_observation(
+            channel_id=channel_id,
+            channel_type=ctx.get("channel_type", ""),
+            sender_id=ctx.get("sender_id", ""),
+            sender_name=ctx.get("sender", ""),
+            message=ctx.get("message", ""),
+            event_id=ctx.get("event_id", ""),
+            direction="incoming",
+            raw_ctx=ctx,
+        )
 
-        # Build observation context
-        obs = {
-            "message": ctx.get("message", ""),
+        await self._observe(obs)
+        return ctx
+
+    async def on_after_send(self, ctx: dict) -> dict:
+        """Observe outgoing messages (bot responses) on lurked channels."""
+        channel_id = str(ctx.get("channel_id", ""))
+
+        if not self.is_lurked(channel_id):
+            return ctx
+
+        obs = self._build_observation(
+            channel_id=channel_id,
+            channel_type=ctx.get("channel_type", ""),
+            sender_id="self",
+            sender_name="bot",
+            message=ctx.get("text", ""),
+            event_id="",
+            direction="outgoing",
+            raw_ctx=ctx,
+        )
+
+        await self._observe(obs)
+        return ctx
+
+    def _build_observation(self, *, channel_id, channel_type, sender_id,
+                           sender_name, message, event_id, direction,
+                           raw_ctx) -> dict:
+        """Build a normalized observation dict."""
+        return {
+            "message": message,
             "channel_id": channel_id,
-            "channel_type": ctx.get("channel_type", ""),
-            "channel_name": channel_name,
-            "sender_id": ctx.get("sender_id", ""),
-            "sender_name": ctx.get("sender", ""),
+            "channel_type": channel_type,
+            "channel_name": self._channel_name(channel_id),
+            "sender_id": sender_id,
+            "sender_name": sender_name,
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "event_id": ctx.get("event_id", ""),
-            "raw_ctx": ctx,
+            "event_id": event_id,
+            "direction": direction,
+            "raw_ctx": raw_ctx,
         }
 
-        # Count
+    async def _observe(self, obs: dict) -> None:
+        """Process an observation: count, fire extension points, write sink."""
+        channel_id = obs["channel_id"]
         self._counts[channel_id] = self._counts.get(channel_id, 0) + 1
 
         # Fire extension point for other plugins (sinks, indexers, etc.)
@@ -162,17 +204,11 @@ class LurkerPlugin(Plugin):
                     else:
                         method(obs)
                 except Exception as e:
-                    print(
-                        f"[Lurker] Sink error: {e}", file=sys.stderr
-                    )
+                    print(f"[Lurker] Sink error: {e}", file=sys.stderr)
 
         # Built-in sink (if configured)
         if self._sink != "none":
             self._write_sink(obs)
-
-        # Abort — don't let the agent respond
-        ctx["abort"] = True
-        return ctx
 
     # --- Built-in sinks ---
 
@@ -196,6 +232,7 @@ class LurkerPlugin(Plugin):
         filepath = day_dir / f"{obs['channel_id']}.jsonl"
         record = {
             "ts": obs["timestamp"],
+            "direction": obs["direction"],
             "channel": obs["channel_id"],
             "channel_name": obs["channel_name"],
             "sender_id": obs["sender_id"],
@@ -226,8 +263,11 @@ class LurkerPlugin(Plugin):
             with open(filepath, "w", encoding="utf-8") as f:
                 f.write(header)
 
+        direction = obs.get("direction", "incoming")
+        prefix = "→" if direction == "outgoing" else ""
+
         with open(filepath, "a", encoding="utf-8") as f:
-            f.write(f"**{sender}** ({ts}):\n{text}\n\n")
+            f.write(f"{prefix}**{sender}** ({ts}):\n{text}\n\n")
 
     # --- Setup Wizard ---
 

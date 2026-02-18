@@ -3,7 +3,6 @@
 import json
 import pytest
 from pathlib import Path
-from unittest.mock import MagicMock
 
 from cobot.plugins.lurker.plugin import LurkerPlugin
 
@@ -53,9 +52,9 @@ def lurker_nosink(tmp_path):
     return plugin
 
 
-def make_ctx(channel_id="-100111", message="hello world", sender="alice",
-             sender_id="42", channel_type="telegram", event_id="msg_1"):
-    """Build a message context dict."""
+def make_incoming_ctx(channel_id="-100111", message="hello world", sender="alice",
+                      sender_id="42", channel_type="telegram", event_id="msg_1"):
+    """Build an incoming message context dict."""
     return {
         "message": message,
         "sender": sender,
@@ -63,6 +62,17 @@ def make_ctx(channel_id="-100111", message="hello world", sender="alice",
         "channel_id": channel_id,
         "channel_type": channel_type,
         "event_id": event_id,
+    }
+
+
+def make_outgoing_ctx(channel_id="-100111", text="bot reply",
+                      channel_type="telegram", recipient="alice"):
+    """Build an outgoing message context dict."""
+    return {
+        "text": text,
+        "recipient": recipient,
+        "channel_type": channel_type,
+        "channel_id": channel_id,
     }
 
 
@@ -87,66 +97,105 @@ class TestLurkerConfig:
         assert plugin._sink == "jsonl"
 
 
-class TestLurkerHook:
+class TestIncomingMessages:
     @pytest.mark.asyncio
-    async def test_lurked_channel_aborts(self, lurker):
-        ctx = make_ctx(channel_id="-100111")
-        result = await lurker.on_message_received(ctx)
-        assert result["abort"] is True
-
-    @pytest.mark.asyncio
-    async def test_non_lurked_channel_passes_through(self, lurker):
-        ctx = make_ctx(channel_id="-100999")
+    async def test_lurked_channel_does_not_abort(self, lurker):
+        """Lurker observes but does NOT suppress responses."""
+        ctx = make_incoming_ctx(channel_id="-100111")
         result = await lurker.on_message_received(ctx)
         assert result.get("abort") is not True
 
     @pytest.mark.asyncio
-    async def test_counts_messages(self, lurker):
-        for _ in range(3):
-            await lurker.on_message_received(make_ctx(channel_id="-100111"))
-        await lurker.on_message_received(make_ctx(channel_id="-100222"))
+    async def test_non_lurked_channel_passes_through(self, lurker):
+        ctx = make_incoming_ctx(channel_id="-100999")
+        result = await lurker.on_message_received(ctx)
+        assert result.get("abort") is not True
 
-        assert lurker._counts["-100111"] == 3
-        assert lurker._counts["-100222"] == 1
-
-
-class TestJsonlSink:
     @pytest.mark.asyncio
-    async def test_writes_jsonl(self, lurker, tmp_path):
-        await lurker.on_message_received(make_ctx(message="test msg"))
+    async def test_counts_incoming(self, lurker):
+        for _ in range(3):
+            await lurker.on_message_received(make_incoming_ctx(channel_id="-100111"))
+        assert lurker._counts["-100111"] == 3
 
-        # Find the JSONL file
-        lurker_dir = tmp_path / "lurker"
-        jsonl_files = list(lurker_dir.rglob("*.jsonl"))
+
+class TestOutgoingMessages:
+    @pytest.mark.asyncio
+    async def test_logs_outgoing(self, lurker, tmp_path):
+        """Bot responses on lurked channels are also logged."""
+        await lurker.on_after_send(make_outgoing_ctx(channel_id="-100111"))
+
+        jsonl_files = list((tmp_path / "lurker").rglob("*.jsonl"))
         assert len(jsonl_files) == 1
 
-        lines = jsonl_files[0].read_text().strip().split("\n")
-        assert len(lines) == 1
-
-        record = json.loads(lines[0])
-        assert record["text"] == "test msg"
-        assert record["sender"] == "alice"
-        assert record["channel"] == "-100111"
-        assert record["channel_name"] == "dev-chat"
+        record = json.loads(jsonl_files[0].read_text().strip())
+        assert record["direction"] == "outgoing"
+        assert record["sender"] == "bot"
+        assert record["text"] == "bot reply"
 
     @pytest.mark.asyncio
-    async def test_appends_multiple(self, lurker, tmp_path):
-        await lurker.on_message_received(make_ctx(message="msg 1"))
-        await lurker.on_message_received(make_ctx(message="msg 2"))
-        await lurker.on_message_received(make_ctx(message="msg 3"))
+    async def test_ignores_non_lurked_outgoing(self, lurker, tmp_path):
+        await lurker.on_after_send(make_outgoing_ctx(channel_id="-100999"))
+
+        lurker_dir = tmp_path / "lurker"
+        if lurker_dir.exists():
+            assert list(lurker_dir.rglob("*.jsonl")) == []
+
+    @pytest.mark.asyncio
+    async def test_counts_outgoing(self, lurker):
+        await lurker.on_after_send(make_outgoing_ctx(channel_id="-100111"))
+        assert lurker._counts["-100111"] == 1
+
+
+class TestBothDirections:
+    @pytest.mark.asyncio
+    async def test_interleaved_log(self, lurker, tmp_path):
+        """Incoming and outgoing messages interleave in the same log."""
+        await lurker.on_message_received(make_incoming_ctx(message="hi bot"))
+        await lurker.on_after_send(make_outgoing_ctx(text="hello human"))
+        await lurker.on_message_received(make_incoming_ctx(message="thanks"))
 
         jsonl_files = list((tmp_path / "lurker").rglob("*.jsonl"))
         lines = jsonl_files[0].read_text().strip().split("\n")
         assert len(lines) == 3
 
+        records = [json.loads(l) for l in lines]
+        assert records[0]["direction"] == "incoming"
+        assert records[0]["text"] == "hi bot"
+        assert records[1]["direction"] == "outgoing"
+        assert records[1]["text"] == "hello human"
+        assert records[2]["direction"] == "incoming"
+        assert records[2]["text"] == "thanks"
+
+    @pytest.mark.asyncio
+    async def test_total_count(self, lurker):
+        await lurker.on_message_received(make_incoming_ctx())
+        await lurker.on_after_send(make_outgoing_ctx())
+        await lurker.on_message_received(make_incoming_ctx())
+        assert lurker._counts["-100111"] == 3
+
+
+class TestJsonlSink:
+    @pytest.mark.asyncio
+    async def test_writes_jsonl(self, lurker, tmp_path):
+        await lurker.on_message_received(make_incoming_ctx(message="test msg"))
+
+        jsonl_files = list((tmp_path / "lurker").rglob("*.jsonl"))
+        assert len(jsonl_files) == 1
+
+        record = json.loads(jsonl_files[0].read_text().strip())
+        assert record["text"] == "test msg"
+        assert record["sender"] == "alice"
+        assert record["channel"] == "-100111"
+        assert record["channel_name"] == "dev-chat"
+        assert record["direction"] == "incoming"
+
     @pytest.mark.asyncio
     async def test_separate_files_per_channel(self, lurker, tmp_path):
-        await lurker.on_message_received(make_ctx(channel_id="-100111"))
-        await lurker.on_message_received(make_ctx(channel_id="-100222"))
+        await lurker.on_message_received(make_incoming_ctx(channel_id="-100111"))
+        await lurker.on_message_received(make_incoming_ctx(channel_id="-100222"))
 
         jsonl_files = list((tmp_path / "lurker").rglob("*.jsonl"))
         assert len(jsonl_files) == 2
-
         names = {f.stem for f in jsonl_files}
         assert "-100111" in names
         assert "-100222" in names
@@ -155,7 +204,7 @@ class TestJsonlSink:
 class TestMarkdownSink:
     @pytest.mark.asyncio
     async def test_writes_markdown(self, lurker_md, tmp_path):
-        await lurker_md.on_message_received(make_ctx(message="hello"))
+        await lurker_md.on_message_received(make_incoming_ctx(message="hello"))
 
         md_files = list((tmp_path / "lurker").rglob("*.md"))
         assert len(md_files) == 1
@@ -166,34 +215,22 @@ class TestMarkdownSink:
         assert "hello" in content
 
     @pytest.mark.asyncio
-    async def test_appends_markdown(self, lurker_md, tmp_path):
-        await lurker_md.on_message_received(make_ctx(message="first"))
-        await lurker_md.on_message_received(
-            make_ctx(message="second", sender="bob")
-        )
+    async def test_outgoing_has_arrow_prefix(self, lurker_md, tmp_path):
+        await lurker_md.on_after_send(make_outgoing_ctx(text="reply"))
 
         md_files = list((tmp_path / "lurker").rglob("*.md"))
         content = md_files[0].read_text()
-        assert "**alice**" in content
-        assert "**bob**" in content
-        assert "first" in content
-        assert "second" in content
+        assert "→**bot**" in content
 
 
 class TestNoSink:
     @pytest.mark.asyncio
     async def test_no_files_written(self, lurker_nosink, tmp_path):
-        await lurker_nosink.on_message_received(make_ctx())
+        await lurker_nosink.on_message_received(make_incoming_ctx())
 
         lurker_dir = tmp_path / "lurker"
         if lurker_dir.exists():
             assert list(lurker_dir.rglob("*.*")) == []
-
-    @pytest.mark.asyncio
-    async def test_still_aborts(self, lurker_nosink):
-        ctx = make_ctx()
-        result = await lurker_nosink.on_message_received(ctx)
-        assert result["abort"] is True
 
 
 class TestWizard:
