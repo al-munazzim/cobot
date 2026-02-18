@@ -26,10 +26,11 @@ class LurkerPlugin(Plugin):
     """Passive channel observer.
 
     Hooks into on_message_received. For channels configured as "lurk",
-    it captures the message, fires lurker.on_observe for sinks to handle,
-    and sets ctx["abort"] = True to prevent the agent from responding.
+    it captures the message and fires lurker.on_observe for sinks to handle.
 
     For channels NOT in the lurk list, it passes through untouched.
+
+    The lurker never modifies the message context — it only reads.
 
     Config:
         lurker:
@@ -128,7 +129,7 @@ class LurkerPlugin(Plugin):
     async def on_message_received(self, ctx: dict) -> dict:
         """Observe incoming messages on lurked channels.
 
-        Does NOT abort — the bot can still respond. Lurking is observation only.
+        Pure observation — never modifies ctx.
         """
         channel_id = str(ctx.get("channel_id", ""))
 

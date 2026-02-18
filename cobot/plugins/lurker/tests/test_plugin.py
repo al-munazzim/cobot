@@ -99,17 +99,25 @@ class TestLurkerConfig:
 
 class TestIncomingMessages:
     @pytest.mark.asyncio
-    async def test_lurked_channel_does_not_abort(self, lurker):
-        """Lurker observes but does NOT suppress responses."""
-        ctx = make_incoming_ctx(channel_id="-100111")
-        result = await lurker.on_message_received(ctx)
-        assert result.get("abort") is not True
+    async def test_lurked_channel_is_logged(self, lurker, tmp_path):
+        """Messages on lurked channels are observed."""
+        await lurker.on_message_received(make_incoming_ctx(channel_id="-100111"))
+        assert lurker._counts["-100111"] == 1
 
     @pytest.mark.asyncio
-    async def test_non_lurked_channel_passes_through(self, lurker):
-        ctx = make_incoming_ctx(channel_id="-100999")
+    async def test_non_lurked_channel_ignored(self, lurker):
+        """Messages on non-lurked channels are not observed."""
+        await lurker.on_message_received(make_incoming_ctx(channel_id="-100999"))
+        assert "-100999" not in lurker._counts
+
+    @pytest.mark.asyncio
+    async def test_ctx_not_modified(self, lurker):
+        """Lurker never modifies the message context."""
+        ctx = make_incoming_ctx(channel_id="-100111")
+        original_keys = set(ctx.keys())
         result = await lurker.on_message_received(ctx)
-        assert result.get("abort") is not True
+        assert set(result.keys()) == original_keys
+        assert "abort" not in result
 
     @pytest.mark.asyncio
     async def test_counts_incoming(self, lurker):
